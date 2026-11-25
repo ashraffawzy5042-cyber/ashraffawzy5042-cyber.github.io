@@ -1,0 +1,3267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ZIKO FM - راديو زمان المصري الكلاسيكي</title>
+
+  <!-- خطوط عربية كلاسيكية وعصرية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- أيقونات Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PeerJS للبث الصوتي المباشر بين المذيع والمستمعين -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <style>
+    :root {
+      --wood-dark: #281306;
+      --wood-mid: #47240f;
+      --wood-light: #6d391b;
+      --brass-light: #ebd094;
+      --brass-mid: #b8924a;
+      --brass-dark: #634618;
+      --ivory-top: #fcf8f0;
+      --ivory-side: #cbb998;
+      --amber-glow: #ff9d2e;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: radial-gradient(circle at top, #2d1b10 0%, #140b06 55%, #090503 100%);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      overflow-x: hidden;
+    }
+
+    input, textarea { user-select: text; -webkit-user-select: text; }
+    #volumeKnobBase { touch-action: none; }
+
+    /* الصندوق الخشبي الكلاسيكي للراديو */
+    .radio-cabinet {
+      width: 100%;
+      max-width: 445px;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(0, 0, 0, 0.09) 0px,
+          rgba(0, 0, 0, 0.09) 2px,
+          transparent 2px,
+          transparent 7px
+        ),
+        linear-gradient(145deg, var(--wood-light) 0%, var(--wood-mid) 48%, var(--wood-dark) 100%);
+      border-radius: 30px;
+      padding: 12px;
+      box-shadow:
+        0 26px 64px rgba(0, 0, 0, 0.9),
+        inset 0 2px 4px rgba(255, 222, 173, 0.35),
+        inset 0 -4px 12px rgba(0, 0, 0, 0.85);
+      border: 3px solid #381b0a;
+      position: relative;
+    }
+
+    /* حليات نحاسية في الزوايا */
+    .corner-ornament {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--brass-mid);
+      pointer-events: none;
+      z-index: 20;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+    }
+    .corner-tl { top: 6px; left: 6px; border-right: none; border-bottom: none; border-top-left-radius: 22px; }
+    .corner-tr { top: 6px; right: 6px; border-left: none; border-bottom: none; border-top-right-radius: 22px; }
+    .corner-bl { bottom: 6px; left: 6px; border-right: none; border-top: none; border-bottom-left-radius: 22px; }
+    .corner-br { bottom: 6px; right: 6px; border-left: none; border-top: none; border-bottom-right-radius: 22px; }
+
+    /* مسامير نحاسية صغيرة */
+    .brass-screw {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #f7e3b2, #856222);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), inset 0 0 1px #000;
+      position: relative;
+    }
+    .brass-screw::after {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 1px;
+      right: 1px;
+      height: 1px;
+      background: #3d2909;
+      transform: rotate(35deg);
+    }
+
+    /* شبكة السماعة القماشية العلوية */
+    .speaker-grille {
+      background-color: #8c7355;
+      background-image:
+        linear-gradient(45deg, rgba(42, 27, 13, 0.36) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(42, 27, 13, 0.36) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(42, 27, 13, 0.36) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(42, 27, 13, 0.36) 75%);
+      background-size: 6px 6px;
+      border-radius: 18px;
+      border: 2px solid #57381c;
+      box-shadow:
+        inset 0 4px 12px rgba(0, 0, 0, 0.75),
+        0 2px 3px rgba(255, 220, 160, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* شعار ZIKO FM الذهبي */
+    .ziko-logo-text {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(180deg, #fff4c9 0%, #e0b358 48%, #825917 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.88));
+    }
+
+    /* الأنتينا النحاسية */
+    .antenna-rod {
+      width: 102px;
+      height: 7px;
+      background: linear-gradient(180deg, #f5c9a4 0%, #b86f39 50%, #592e11 100%);
+      border-radius: 99px;
+      transform: rotate(-16deg);
+      transform-origin: right center;
+      box-shadow: 0 3px 5px rgba(0, 0, 0, 0.65);
+      position: relative;
+    }
+    .antenna-rod::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      top: -2px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffe6cc, #8f4b1d);
+    }
+
+    /* لوحة التحكم النحاسية الوسطى */
+    .brass-panel {
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.035) 0px,
+          rgba(255, 255, 255, 0.035) 1px,
+          transparent 1px,
+          transparent 3px
+        ),
+        linear-gradient(160deg, #caa864 0%, #9f7c3c 50%, #735420 100%);
+      border-radius: 18px;
+      border: 2px solid #4f360f;
+      box-shadow:
+        inset 0 2px 3px rgba(255, 246, 214, 0.5),
+        inset 0 -3px 6px rgba(32, 18, 4, 0.75),
+        0 6px 15px rgba(0, 0, 0, 0.65);
+    }
+
+    /* الصمام الإلكتروني المتوهج */
+    .vacuum-tube-housing {
+      background: linear-gradient(180deg, #2b1d0e, #140c05);
+      border-radius: 26px 26px 8px 8px;
+      border: 2px solid #694c1e;
+      box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9), 0 2px 3px rgba(255, 230, 170, 0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 6px;
+    }
+    .vacuum-glass {
+      width: 34px;
+      height: 76px;
+      border-radius: 18px 18px 4px 4px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0.15) 100%);
+      border: 1px solid rgba(255, 235, 190, 0.35);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.5s ease;
+    }
+    .tube-filament {
+      width: 14px;
+      height: 46px;
+      border-radius: 4px;
+      background: #3d2817;
+      border: 1px solid #5c3d24;
+      position: relative;
+      transition: all 0.5s ease;
+    }
+    .radio-on .vacuum-glass {
+      box-shadow: 0 0 22px rgba(255, 145, 20, 0.78), inset 0 0 12px rgba(255, 160, 40, 0.85);
+      border-color: rgba(255, 205, 115, 0.85);
+    }
+    .radio-on .tube-filament {
+      background: linear-gradient(180deg, #fff4b8 0%, #ff9914 52%, #d94e00 100%);
+      box-shadow: 0 0 18px #ff8c00, 0 0 32px #ff5500;
+      animation: filamentFlicker 3s infinite alternate;
+    }
+    @keyframes filamentFlicker {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 1; filter: brightness(1.14); }
+      75% { opacity: 0.9; }
+    }
+
+    /* شاشة الترددات التناظرية */
+    .dial-window {
+      background: #2e2112;
+      border-radius: 12px;
+      border: 3px solid #593e14;
+      box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(255, 240, 190, 0.4);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+    .radio-on .dial-window {
+      background: radial-gradient(ellipse at center, #ffe2a6 0%, #e09f42 65%, #995c14 100%);
+      box-shadow: inset 0 0 18px rgba(255, 150, 20, 0.8), 0 0 14px rgba(255, 175, 65, 0.45);
+    }
+    .dial-scale-text {
+      color: #6b5335;
+      transition: color 0.4s ease;
+    }
+    .radio-on .dial-scale-text {
+      color: #361d04;
+      font-weight: 800;
+    }
+
+    /* إبرة التردد الحمراء المتحركة */
+    .tuning-needle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #d91e18;
+      box-shadow: 0 0 6px rgba(220, 20, 20, 0.9);
+      transition: left 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 10;
+    }
+    .tuning-needle::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -4px;
+      border-left: 5.5px solid transparent;
+      border-right: 5.5px solid transparent;
+      border-top: 7px solid #d91e18;
+    }
+
+    /* شارة حالة البث */
+    .live-badge {
+      background: linear-gradient(180deg, #422b12, #261708);
+      border: 1.5px solid #8c682b;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #5c4324;
+      transition: all 0.3s ease;
+    }
+    .radio-on .live-dot {
+      background: #ff9d1c;
+      box-shadow: 0 0 8px #ff9d1c, 0 0 16px #ff5500;
+      animation: pulseLive 1.4s infinite;
+    }
+    .radio-on.quran-mode .live-dot {
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80, 0 0 16px #16a34a;
+    }
+    @keyframes pulseLive {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.75; }
+    }
+
+    /* مؤشر VU التناظري */
+    .vu-meter {
+      background: #2b2114;
+      border: 2px solid #4d3512;
+      border-radius: 8px;
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.85);
+      position: relative;
+      overflow: hidden;
+      transition: background 0.4s ease;
+    }
+    .radio-on .vu-meter {
+      background: radial-gradient(circle at bottom, #ffebb8 0%, #d49b42 100%);
+    }
+    .vu-needle {
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      width: 2px;
+      height: 30px;
+      background: #b81d13;
+      transform-origin: bottom center;
+      transform: translateX(-50%) rotate(-38deg);
+      transition: transform 0.12s ease-out;
+    }
+
+    /* زرار التشغيل الميكانيكي */
+    .power-btn-ring {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #5e4216, #b89146);
+      padding: 4px;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    }
+    .power-btn {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fcf7eb 0%, #dfd1b4 70%, #b39f78 100%);
+      border: 2px solid #8a6d3b;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.65), inset 0 2px 3px #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #36220a;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .power-btn:active {
+      transform: translateY(3px) scale(0.96);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 3px 6px rgba(0, 0, 0, 0.45);
+    }
+    .radio-on .power-btn {
+      background: radial-gradient(circle at 35% 30%, #fff8e6 0%, #f2d59b 70%, #c99d49 100%);
+      box-shadow: 0 0 14px rgba(255, 175, 55, 0.65), 0 3px 5px rgba(0, 0, 0, 0.6);
+    }
+
+    /* بكرة الصوت الدوارة */
+    .rotary-knob-base {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #3d290c 60%, #7d5b24 100%);
+      padding: 4px;
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.75);
+      position: relative;
+      cursor: grab;
+    }
+    .rotary-knob-base:active {
+      cursor: grabbing;
+    }
+    .rotary-knob {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        #b8924a, #f2d79b, #8f6b29, #e5c37b, #78561c, #ebd094, #b8924a
+      );
+      border: 2px solid #593e13;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.6);
+      position: relative;
+      transform: rotate(45deg);
+      transition: transform 0.1s ease-out;
+    }
+    .rotary-knob::after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 11px;
+      border-radius: 2px;
+      background: #2b1804;
+      box-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+    }
+
+    /* مفاتيح البيانو العاجية الأربعة الرئيسية */
+    .piano-key {
+      background: linear-gradient(180deg, var(--ivory-top) 0%, #ede2cc 82%, var(--ivory-side) 100%);
+      border: 1.5px solid #6e5226;
+      border-bottom: 6px solid #9c8660;
+      border-radius: 13px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.55), inset 0 1px 1px #ffffff;
+      transition: all 0.09s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .piano-key:active, .piano-key.active-key {
+      transform: translateY(3px);
+      border-bottom-width: 2px;
+      background: linear-gradient(180deg, #f6e7c9 0%, #dec492 100%);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), inset 0 2px 5px rgba(120, 75, 15, 0.35);
+    }
+    .piano-key.active-key .key-indicator {
+      background: #ff9500;
+      box-shadow: 0 0 8px #ff9500;
+    }
+    .piano-key.quran-key.active-key .key-indicator {
+      background: #16a34a;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    /* شريط المفاتيح المنزلقة السفلية */
+    .bottom-dock {
+      background: linear-gradient(180deg, #f2e8d5 0%, #d4c3a3 100%);
+      border-top: 3px solid #6e4e20;
+      border-radius: 0 0 18px 18px;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.7);
+    }
+    .dock-switch-slot {
+      width: 42px;
+      height: 17px;
+      background: #2b1d0e;
+      border-radius: 99px;
+      padding: 2px;
+      border: 1px solid #7d6234;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+    .dock-switch-thumb {
+      width: 17px;
+      height: 11px;
+      border-radius: 99px;
+      background: linear-gradient(180deg, #8c7b65, #4a3e30);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .dock-item.active .dock-switch-slot {
+      background: linear-gradient(90deg, #8c6523, #d4a64a);
+    }
+    .dock-item.active .dock-switch-thumb {
+      transform: translateX(-19px);
+      background: linear-gradient(180deg, #fff5d6, #d4a242);
+      box-shadow: 0 0 6px rgba(255, 190, 70, 0.8);
+    }
+
+    /* أعمدة الذبذبات */
+    .eq-bar {
+      width: 4px;
+      background: #735a38;
+      border-radius: 2px;
+      transition: height 0.15s ease, background 0.3s ease;
+    }
+    .radio-on .eq-bar {
+      background: #ffdfa0;
+      box-shadow: 0 0 5px rgba(255, 200, 100, 0.7);
+    }
+    .radio-on.quran-mode .eq-bar {
+      background: #bbf7d0;
+      box-shadow: 0 0 5px rgba(74, 222, 128, 0.7);
+    }
+
+    /* النوافذ المنبثقة */
+    .vintage-modal {
+      background: linear-gradient(160deg, #3b200e 0%, #211006 100%);
+      border: 2px solid var(--brass-mid);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+    }
+
+    /* شريط الإعلان المثبت */
+    .pinned-ticker {
+      background: linear-gradient(90deg, #3d1f09, #5e3110, #3d1f09);
+      border: 1px solid rgba(235, 208, 148, 0.5);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.65);
+    }
+
+    /* شريط تمرير مخصص */
+    .vintage-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .vintage-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 99px;
+    }
+    .vintage-scroll::-webkit-scrollbar-thumb {
+      background: #9e7c3c;
+      border-radius: 99px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- هيكل الراديو الكلاسيكي -->
+  <main id="radioApp" class="radio-cabinet">
+    <!-- حليات الزوايا -->
+    <div class="corner-ornament corner-tl"></div>
+    <div class="corner-ornament corner-tr"></div>
+    <div class="corner-ornament corner-bl"></div>
+    <div class="corner-ornament corner-br"></div>
+
+    <!-- الجزء العلوي: شبكة السماعة والشعار والحالة والإعلان المثبت -->
+    <section class="speaker-grille p-3.5 mb-2.5">
+      <div class="flex items-center justify-between text-[#f5e6c8] mb-1">
+        <button id="topScheduleBtn" class="w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center border border-[#b8924a]/40 active:scale-95 transition" title="مواعيد البث">
+          <i class="fa-regular fa-calendar-days text-sm"></i>
+        </button>
+
+        <div class="flex items-center justify-center pt-1">
+          <div class="antenna-rod"></div>
+        </div>
+
+        <button id="topStudioBtn" class="w-9 h-9 rounded-full bg-black/30 hover:bg-black/50 flex items-center justify-center border border-[#b8924a]/40 active:scale-95 transition relative" title="استوديو المذيع">
+          <i class="fa-solid fa-microphone-lines text-sm text-amber-300"></i>
+          <span id="studioLiveDot" class="w-2 h-2 rounded-full bg-red-500 hidden animate-ping absolute top-1.5 right-1.5"></span>
+        </button>
+      </div>
+
+      <div class="text-center pb-0.5">
+        <h1 class="ziko-logo-text text-4xl sm:text-5xl leading-none tracking-wider" dir="ltr">ZIKO FM</h1>
+        <p class="text-[#f7e7c4] font-bold text-sm sm:text-base mt-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.9)]">
+          صوتك يوصل لكل مكان
+        </p>
+      </div>
+
+      <!-- مؤشر حالة البث العلوي -->
+      <div class="mt-1.5 flex items-center justify-center">
+        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-black/45 border border-amber-300/35 text-[11px] font-extrabold text-amber-100">
+          <span id="headerStatusDot" class="w-2 h-2 rounded-full bg-stone-400 transition-all"></span>
+          <span id="headerStatusLabel">في انتظار البث</span>
+        </div>
+      </div>
+
+      <!-- شريط الإعلان المثبت المزامن عبر Firebase (/ziko_fm/pinned_ad) -->
+      <div id="pinnedBannerBox" class="hidden pinned-ticker mt-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold text-amber-200 flex items-center gap-1.5">
+        <i class="fa-solid fa-bullhorn text-amber-400 shrink-0"></i>
+        <span id="pinnedBannerText" class="truncate"></span>
+      </div>
+
+      <div class="brass-screw absolute bottom-2 left-2.5"></div>
+      <div class="brass-screw absolute bottom-2 right-2.5"></div>
+    </section>
+
+    <!-- الجزء الأوسط: لوحة التحكم النحاسية -->
+    <section class="brass-panel p-3 mb-2.5 relative">
+      <div class="brass-screw absolute top-2 left-2"></div>
+      <div class="brass-screw absolute top-2 right-2"></div>
+
+      <!-- الصمام الإلكتروني وشاشة التردد -->
+      <div class="flex items-stretch gap-2.5 mb-2.5">
+        <div class="vacuum-tube-housing w-14 shrink-0 py-1.5" title="صمام التسخين الإلكتروني">
+          <div class="vacuum-glass">
+            <div class="tube-filament"></div>
+          </div>
+          <span class="text-[9px] font-bold text-amber-200/75 mt-1 tracking-wider">TUBE</span>
+        </div>
+
+        <div class="dial-window flex-1 p-2 flex flex-col justify-between" dir="ltr">
+          <div id="tuningNeedle" class="tuning-needle" style="left: 62%;"></div>
+
+          <div class="flex justify-between text-[10px] font-mono dial-scale-text px-1">
+            <span>W</span><span>80</span><span>120</span><span>180</span><span>240</span><span>320</span><span>Mz</span>
+          </div>
+
+          <div class="my-1 border-y border-current/30 py-1 flex justify-between items-center px-1 dial-scale-text">
+            <span class="text-[9px] font-extrabold bg-black/15 px-1 rounded">القرآن 98.2</span>
+            <div class="flex-1 mx-1.5 flex justify-between items-center opacity-75">
+              <span class="h-2 w-[1px] bg-current"></span>
+              <span class="h-1.5 w-[1px] bg-current"></span>
+              <span class="h-3 w-[1.5px] bg-current"></span>
+              <span class="h-1.5 w-[1px] bg-current"></span>
+              <span class="h-2 w-[1px] bg-current"></span>
+              <span class="h-1.5 w-[1px] bg-current"></span>
+              <span class="h-3 w-[1.5px] bg-current"></span>
+              <span class="h-1.5 w-[1px] bg-current"></span>
+              <span class="h-2 w-[1px] bg-current"></span>
+            </div>
+            <span class="text-[9px] font-extrabold bg-black/15 px-1 rounded">ZIKO 98.5</span>
+          </div>
+
+          <div class="flex justify-between text-[10px] font-mono dial-scale-text px-1">
+            <span>Q</span><span>92.0</span><span>98.2</span><span>98.5</span><span>104.0</span><span>108.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بيانات البرنامج والمستمعين -->
+      <div class="bg-black/25 rounded-xl p-2.5 border border-[#523911]/60 mb-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <div class="text-center min-w-[62px]">
+            <i class="fa-solid fa-headphones text-[#2b1905] text-sm"></i>
+            <div id="listenerCount" class="font-black text-sm text-[#241403] leading-tight">1</div>
+            <div class="text-[10px] font-bold text-[#3b2309]">مستمع الآن</div>
+          </div>
+
+          <div class="flex-1 text-center overflow-hidden">
+          <div class="inline-flex items-center gap-1.5 live-badge px-2.5 py-0.5 rounded-full mb-1">
+            <span class="live-dot"></span>
+            <span id="liveStatusText" class="text-[11px] font-bold text-amber-100">في انتظار البث</span>
+          </div>
+          <h2 id="programTitle" class="font-black text-base sm:text-lg text-[#1f1102] truncate">
+            بث ZIKO FM المباشر
+          </h2>
+        </div>
+
+        <div class="flex flex-col items-center gap-1.5 min-w-[68px]">
+            <div id="visualizerBox" class="bg-[#26190b] border border-[#6e501e] rounded px-2 py-1.5 flex items-end justify-center gap-[3px] h-7 w-full">
+              <span class="eq-bar h-2"></span>
+              <span class="eq-bar h-3"></span>
+              <span class="eq-bar h-4"></span>
+              <span class="eq-bar h-2.5"></span>
+              <span class="eq-bar h-5"></span>
+              <span class="eq-bar h-3"></span>
+              <span class="eq-bar h-2"></span>
+            </div>
+            <button id="quickSwitchBtn" class="w-full py-0.5 px-1.5 rounded bg-[#f5ebd6] hover:bg-white text-[#2b1905] border border-[#6e501e] text-[10px] font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center gap-1">
+              <i class="fa-solid fa-book-quran text-emerald-800"></i>
+              <span id="quickSwitchLabel">القرآن</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- بطاقة الحالة عند عدم اتصال المذيع بالبث -->
+        <div id="offlineNoticeBar" class="hidden mt-2 p-2.5 rounded-xl bg-[#2b1506]/95 border border-amber-400/50 text-amber-100 text-xs flex flex-col gap-2">
+          <div class="font-bold text-center leading-snug">
+            البث المباشر غير متاح حالياً — يمكنك التحويل إلى إذاعة القرآن الكريم أو فتح الاستوديو.
+          </div>
+          <div class="flex items-center justify-center gap-2">
+            <button id="switchToQuranBannerBtn" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] shadow active:scale-95 transition">
+              تشغيل إذاعة القرآن الكريم
+            </button>
+            <button id="openStudioFromBannerBtn" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 font-black text-[11px] shadow active:scale-95 transition">
+              فتح الاستوديو
+            </button>
+          </div>
+        </div>
+
+        <!-- شريط التردد ومستوى الصوت -->
+        <div class="mt-2 flex items-center gap-2">
+          <span id="freqDisplay" class="text-[10px] font-mono font-extrabold text-[#261503] bg-amber-200/40 px-1.5 py-0.5 rounded">98.5 FM</span>
+          <div class="flex-1 h-1.5 bg-[#2e1c09] rounded-full overflow-hidden p-[1px]">
+            <div id="signalBar" class="h-full bg-gradient-to-l from-amber-300 to-amber-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
+          </div>
+          <span id="volPercentBadge" class="text-[10px] font-mono font-extrabold text-[#261503]">85%</span>
+        </div>
+      </div>
+
+      <!-- مؤشر VU + زر التشغيل الميكانيكي + بكرة الصوت -->
+      <div class="flex items-center justify-between gap-2 pt-0.5">
+        <div class="vu-meter w-16 h-12 shrink-0 flex flex-col items-center justify-between p-1" title="مقياس مستوى الصوت VU">
+          <div class="w-full flex justify-between text-[7px] font-mono font-bold text-amber-950/80 px-0.5">
+            <span>-20</span><span>0</span><span class="text-red-700">+3</span>
+          </div>
+          <span class="text-[9px] font-black text-amber-950/90 z-10">VU</span>
+          <div id="vuNeedle" class="vu-needle"></div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button id="btnSelectZiko" class="w-10 h-10 rounded-full bg-[#efe3c8] hover:bg-[#fff8ea] border-2 border-[#6e501e] shadow-md active:translate-y-0.5 flex items-center justify-center text-[#2e1b06] transition" title="بث زيكو المباشر">
+            <i class="fa-solid fa-microphone-lines text-sm"></i>
+          </button>
+
+          <div class="flex flex-col items-center">
+            <div class="power-btn-ring">
+              <button id="powerBtn" class="power-btn" aria-label="تشغيل أو إيقاف الراديو">
+                <i class="fa-solid fa-power-off text-2xl"></i>
+              </button>
+            </div>
+            <span class="text-[10px] font-black text-[#261503] mt-0.5">تشغيل</span>
+          </div>
+
+          <button id="btnSelectQuran" class="w-10 h-10 rounded-full bg-[#efe3c8] hover:bg-[#fff8ea] border-2 border-[#6e501e] shadow-md active:translate-y-0.5 flex items-center justify-center text-emerald-900 transition" title="إذاعة القرآن الكريم">
+            <i class="fa-solid fa-book-quran text-sm"></i>
+          </button>
+        </div>
+
+        <div class="flex flex-col items-center shrink-0">
+          <div id="volumeKnobBase" class="rotary-knob-base" title="اسحب أو اضغط لتغيير مستوى الصوت">
+            <div id="volumeKnob" class="rotary-knob"></div>
+          </div>
+          <span class="text-[10px] font-black text-[#261503] mt-0.5">الصوت</span>
+        </div>
+      </div>
+
+      <div class="brass-screw absolute bottom-1.5 left-2"></div>
+      <div class="brass-screw absolute bottom-1.5 right-2"></div>
+    </section>
+
+    <!-- الأربعة مفاتيح العاجية الرئيسية -->
+    <section class="grid grid-cols-2 gap-2 mb-2.5 px-0.5">
+      <!-- 1. بث زيكو المباشر -->
+      <button id="keyZikoLive" class="piano-key active-key p-2.5 flex flex-col justify-between h-20 text-right">
+        <div class="w-full flex items-center justify-between">
+          <span class="key-indicator w-2.5 h-2.5 rounded-full bg-[#8c7858] transition-all"></span>
+          <i class="fa-solid fa-tower-broadcast text-amber-800 text-sm"></i>
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-black text-[#261503] leading-tight">بث زيكو المباشر</div>
+          <div id="keyZikoSub" class="text-[10px] font-bold text-[#6e471b]">راديو زمان المصري</div>
+        </div>
+      </button>
+
+      <!-- 2. إذاعة القرآن الكريم -->
+      <button id="keyQuranLive" class="piano-key quran-key p-2.5 flex flex-col justify-between h-20 text-right">
+        <div class="w-full flex items-center justify-between">
+          <span class="key-indicator w-2.5 h-2.5 rounded-full bg-[#8c7858] transition-all"></span>
+          <i class="fa-solid fa-book-quran text-emerald-800 text-sm"></i>
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-black text-[#261503] leading-tight">إذاعة القرآن الكريم</div>
+          <div class="text-[10px] font-bold text-emerald-900">تلاوات مباركة 24 ساعة</div>
+        </div>
+      </button>
+
+      <!-- 3. مواعيد البث -->
+      <button id="keySchedule" class="piano-key p-2.5 flex flex-col justify-between h-20 text-right">
+        <div class="w-full flex items-center justify-between">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#8c7858]"></span>
+          <i class="fa-regular fa-clock text-amber-900 text-sm"></i>
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-black text-[#261503] leading-tight">مواعيد البث</div>
+          <div class="text-[10px] font-bold text-[#6e471b]">جدول البث المباشر</div>
+        </div>
+      </button>
+
+      <!-- 4. راسل المذيع (دردشة المستمعين المباشرة) -->
+      <button id="keyLiveChat" class="piano-key p-2.5 flex flex-col justify-between h-20 text-right">
+        <div class="w-full flex items-center justify-between">
+          <span id="chatUnreadDot" class="w-2.5 h-2.5 rounded-full bg-emerald-600 transition-all"></span>
+          <i class="fa-solid fa-comments text-amber-900 text-sm"></i>
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-black text-[#261503] leading-tight">راسل المذيع</div>
+          <div class="text-[10px] font-bold text-[#6e471b]">دردشة وإهداءات حية</div>
+        </div>
+      </button>
+    </section>
+
+    <!-- شريط المفاتيح المنزلقة السفلية -->
+    <footer class="bottom-dock px-3 py-2 grid grid-cols-4 gap-2 text-center">
+      <button class="dock-item flex flex-col items-center gap-1" data-tab="settings">
+        <div class="dock-switch-slot"><div class="dock-switch-thumb"></div></div>
+        <span class="text-[11px] font-extrabold text-[#2c1906]">الإعدادات</span>
+      </button>
+
+      <button class="dock-item flex flex-col items-center gap-1" data-tab="sleep">
+        <div class="dock-switch-slot"><div class="dock-switch-thumb"></div></div>
+        <span class="text-[11px] font-extrabold text-[#2c1906]">منبه النوم</span>
+      </button>
+
+      <button class="dock-item active flex flex-col items-center gap-1" data-tab="home">
+        <div class="dock-switch-slot"><div class="dock-switch-thumb"></div></div>
+        <span class="text-[11px] font-extrabold text-[#2c1906]">الرئيسية</span>
+      </button>
+
+      <button class="dock-item flex flex-col items-center gap-1" data-tab="share">
+        <div class="dock-switch-slot"><div class="dock-switch-thumb"></div></div>
+        <span class="text-[11px] font-extrabold text-[#2c1906]">مشاركة التطبيق</span>
+      </button>
+    </footer>
+  </main>
+
+  <!-- نافذة منبثقة موحدة -->
+  <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-xs hidden items-center justify-center p-3 z-50">
+    <div class="vintage-modal w-full max-w-md rounded-2xl p-4 text-[#f7ebd4] relative max-h-[90vh] overflow-y-auto vintage-scroll">
+      <div class="flex items-center justify-between border-b border-amber-500/30 pb-2.5 mb-3">
+        <h3 id="modalTitle" class="font-black text-base sm:text-lg text-amber-300 flex items-center gap-2">
+          <i class="fa-solid fa-radio"></i>
+          <span>العنوان</span>
+        </h3>
+        <button id="closeModalBtn" class="w-8 h-8 rounded-full bg-amber-900/50 hover:bg-amber-800 text-amber-200 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="modalBody" class="space-y-3 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- إشعار عائم -->
+  <div id="toastMsg" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-[#2b1708] text-amber-200 border border-amber-500/60 px-4 py-2 rounded-full text-xs font-bold shadow-2xl opacity-0 pointer-events-none transition-opacity duration-300 z-50 text-center max-w-[90vw]">
+    تم التحديث
+  </div>
+
+  <!-- مشغل الصوت الرئيسي للمستمع -->
+  <audio id="radioAudioPlayer" playsinline preload="none"></audio>
+  <!-- مشغل الفواصل والأغاني في استوديو المذيع -->
+  <audio id="studioTrackPlayer" crossorigin="anonymous" playsinline></audio>
+
+  <script type="module">
+    /**
+     * =========================================================================
+     * ZIKO FM - تطبيق راديو زمان المصري الكلاسيكي
+     * Firebase Realtime Database v13.4.0 + PeerJS
+     * =========================================================================
+     */
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      set,
+      update,
+      onValue,
+      remove,
+      onDisconnect
+    } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+
+    const STORAGE_KEY = 'ziko_fm_vintage_config_v1';
+
+    // إذاعات تلاوة من شبكة mp3quran (qurango) — بدون إذاعة القاهرة لأن فيها برامج وأحاديث
+    const QURAN_STATIONS = [
+      { id: 'salma', name: 'تلاوات خاشعة' },
+      { id: 'mix', name: 'منوعات لمختلف القراء' },
+      { id: 'mohammed_siddiq_alminshawi', name: 'الشيخ محمد صديق المنشاوي' },
+      { id: 'mahmoud_khalil_alhussary', name: 'الشيخ محمود خليل الحصري' },
+      { id: 'abdulbasit_abdulsamad_mojawwad', name: 'الشيخ عبدالباسط عبدالصمد (مجود)' },
+      { id: 'mustafa_ismail', name: 'الشيخ مصطفى إسماعيل' },
+      { id: 'mishary_alafasi', name: 'الشيخ مشاري العفاسي' }
+    ];
+
+    function quranCandidates(stationId) {
+      const ids = [stationId, 'salma', 'mix'].filter((v, i, a) => a.indexOf(v) === i);
+      return ids.flatMap(id => [
+        `https://qurango.net/radio/${id}`,
+        `https://backup.qurango.net/radio/${id}`
+      ]);
+    }
+
+    const DEFAULT_SHOW_TITLE = 'بث ZIKO FM المباشر';
+    const DEFAULT_HOST_TAGLINE = 'راديو زمان المصري';
+    const DEFAULT_SCHEDULE = `• يبدأ البث المباشر فور فتح الاستوديو من قِبل المذيع.\n• وفي خارج أوقات البث المباشر، تعمل إذاعة القرآن الكريم على مدار الساعة.`;
+
+    // عبارات قديمة تُحذف تلقائياً حتى لو كانت محفوظة في قاعدة البيانات
+    const LEGACY_REMOVED_PATTERN = /\u0635\u0628\u0627\u062d\s*\u0645\u0639\s*\u0632\u064a\u0643\u0648|\u0646\u0627\u062f\u0631\s*\u0632\u0643\u0631\u064a\u0627/;
+
+    function sanitizeStationText(val, fallback) {
+      const clean = String(val || '').trim();
+      if (!clean || LEGACY_REMOVED_PATTERN.test(clean)) return fallback;
+      return clean;
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA_-iZS8fQ_Fun1w0QWVcGRVxheUoXsddU",
+      authDomain: "zikofm.firebaseapp.com",
+      databaseURL: "https://zikofm-default-rtdb.firebaseio.com",
+      projectId: "zikofm",
+      storageBucket: "zikofm.firebasestorage.app",
+      messagingSenderId: "1030776079014",
+      appId: "1:1030776079014:web:7b55cb58a5c1cd9c682a67",
+      measurementId: "G-JY7DH66LCH"
+    };
+
+    const DB_PATHS = {
+      liveState: 'ziko_fm/live_state',
+      pinnedAd: 'ziko_fm/pinned_ad',
+      chat: 'ziko_fm/chat',
+      moderation: 'ziko_fm/moderation',
+      presence: 'ziko_fm/presence'
+    };
+
+    const PEER_CONFIG = {
+      host: '0.peerjs.com',
+      port: 443,
+      path: '/',
+      secure: true,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          {
+            urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'],
+            username: 'peerjs',
+            credential: 'peerjsp'
+          }
+        ]
+      }
+    };
+
+    // كلمة السر لا تُحفظ نصاً: نحفظ بصمتها فقط (SHA-256 مع ملح ومكرر)
+    const PIN_SALT = '45749a58d59217725e7b03ba553c9060';
+    const DEFAULT_PIN_HASH = '3f7ab492c6272881a3d7b4c25859b4fbac0af46f3c5acc41381ad3ed8497620d';
+
+    function sha256(text) {
+      const K = [], H = [];
+      for (let n = 2; K.length < 64; n++) {
+        let prime = true;
+        for (let d = 2; d * d <= n; d++) if (n % d === 0) { prime = false; break; }
+        if (!prime) continue;
+        if (H.length < 8) H.push((Math.pow(n, 1 / 2) % 1 * 4294967296) | 0);
+        K.push((Math.pow(n, 1 / 3) % 1 * 4294967296) | 0);
+      }
+      const bytes = Array.from(new TextEncoder().encode(text));
+      const bitLen = bytes.length * 8;
+      bytes.push(0x80);
+      while (bytes.length % 64 !== 56) bytes.push(0);
+      for (let i = 7; i >= 0; i--) bytes.push(Math.floor(bitLen / Math.pow(2, i * 8)) & 255);
+      const rot = (x, n) => (x >>> n) | (x << (32 - n));
+      for (let off = 0; off < bytes.length; off += 64) {
+        const w = [];
+        for (let i = 0; i < 64; i++) {
+          if (i < 16) {
+            const j = off + i * 4;
+            w[i] = (bytes[j] << 24) | (bytes[j + 1] << 16) | (bytes[j + 2] << 8) | bytes[j + 3];
+          } else {
+            const s0 = rot(w[i - 15], 7) ^ rot(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+            const s1 = rot(w[i - 2], 17) ^ rot(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+            w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+          }
+        }
+        let [a, b, c, d, e, f, g, h] = H;
+        for (let i = 0; i < 64; i++) {
+          const t1 = (h + (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+          const t2 = ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+          h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+        }
+        [a, b, c, d, e, f, g, h].forEach((v, i) => { H[i] = (H[i] + v) | 0; });
+      }
+      return H.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
+    }
+
+    // تحويل الأرقام العربية (١٢٣) إلى إنجليزية
+    function normalizePin(value) {
+      return String(value || '').trim().replace(/[٠-٩۰-۹]/g, ch => String(ch.charCodeAt(0) & 15));
+    }
+
+    function hashPin(value) {
+      const pin = normalizePin(value);
+      let h = '';
+      for (let i = 0; i < 5000; i++) h = sha256(PIN_SALT + h + pin);
+      return h;
+    }
+
+    let pinFailures = 0;
+    let pinLockedUntil = 0;
+
+    function checkPin(value, expectedHash, wrongMessage) {
+      const wait = Math.ceil((pinLockedUntil - Date.now()) / 1000);
+      if (wait > 0) {
+        showToast(`محاولات كثيرة، انتظر ${wait} ثانية`);
+        return false;
+      }
+      if (hashPin(value) === expectedHash) {
+        pinFailures = 0;
+        return true;
+      }
+      if (++pinFailures >= 5) {
+        pinFailures = 0;
+        pinLockedUntil = Date.now() + 60000;
+      }
+      showToast(wrongMessage);
+      return false;
+    }
+
+    // تحميل الإعدادات المحلية إن وجدت
+    function loadSavedConfig() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    const savedCfg = loadSavedConfig();
+    const cleanedHostName = sanitizeStationText(savedCfg.hostName, DEFAULT_HOST_TAGLINE);
+    const cleanedShowTitle = sanitizeStationText(savedCfg.showTitle, DEFAULT_SHOW_TITLE);
+
+    const state = {
+      isOn: false,
+      mode: 'ziko', // 'ziko' أو 'quran'
+      volume: typeof savedCfg.volume === 'number' ? savedCfg.volume : 0.85,
+      staticSoundEnabled: Boolean(savedCfg.staticSoundEnabled), // معطل افتراضياً لعدم إصدار وش عند الضغط
+      quranStation: QURAN_STATIONS.some(q => q.id === savedCfg.quranStation) ? savedCfg.quranStation : 'salma',
+      externalStreamUrl: savedCfg.externalStreamUrl || '',
+      hostName: cleanedHostName,
+      showTitle: cleanedShowTitle,
+      scheduleText: sanitizeStationText(savedCfg.scheduleText, DEFAULT_SCHEDULE),
+      whatsappNumber: savedCfg.whatsappNumber || '',
+      studioPinHash: savedCfg.studioPinHash || DEFAULT_PIN_HASH,
+      settingsPinHash: savedCfg.settingsPinHash || DEFAULT_PIN_HASH,
+      settingsUnlocked: false,
+      listenerName: savedCfg.listenerName || '',
+
+      // حالة البث المزامنة عبر Firebase
+      remoteBroadcast: {
+        isLive: false,
+        broadcastMode: 'offline', // 'mic' | 'break' | 'stream' | 'offline'
+        broadcasterPeerId: '',
+        hasMic: false,
+        showTitle: cleanedShowTitle,
+        hostName: cleanedHostName,
+        scheduleText: savedCfg.scheduleText || DEFAULT_SCHEDULE,
+        externalStreamUrl: savedCfg.externalStreamUrl || '',
+        breakTitle: '',
+        sessionId: '',
+        updatedAt: 0
+      },
+      pinnedNotice: '',
+
+      // حالة استوديو المذيع
+      studioUnlocked: false,
+      isBroadcasting: false,
+      hasActiveMic: false,
+      broadcastMode: 'mic', // 'mic' | 'break' | 'stream'
+      micMuted: false,
+      bgMusicVolume: 0.22,
+      currentBreakTitle: '',
+      playlist: [
+        { id: 'builtin_intro', name: 'تتر بداية برنامج زيكو 🎺', isBuiltIn: true, style: 'intro' },
+        { id: 'builtin_break', name: 'فاصل إعلاني وموسيقى زمان 📻', isBuiltIn: true, style: 'talk' }
+      ],
+
+      // الدردشة والحضور
+      chatMessages: [],
+      chatLocked: false,
+      bannedUsers: {},
+      onlinePeersMap: {},
+      activeListenersCount: 1,
+      firebaseConnected: false,
+      currentModal: null,
+
+      // منبه النوم والمؤشرات
+      sleepTimerMinutes: 0,
+      sleepTimerInterval: null,
+      vuInterval: null
+    };
+
+    function saveLocalConfig() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          volume: state.volume,
+          staticSoundEnabled: state.staticSoundEnabled,
+          quranStation: state.quranStation,
+          externalStreamUrl: state.externalStreamUrl,
+          hostName: state.hostName,
+          showTitle: state.showTitle,
+          scheduleText: state.scheduleText,
+          whatsappNumber: state.whatsappNumber,
+          studioPinHash: state.studioPinHash,
+          settingsPinHash: state.settingsPinHash,
+          listenerName: state.listenerName
+        }));
+      } catch (e) {}
+    }
+
+    const clientId = 'ziko_' + Math.random().toString(36).substring(2, 10);
+
+    // معرف ثابت لكل جهاز حتى يقدر المذيع يحظره
+    function getDeviceId() {
+      const fresh = 'dev_' + Math.random().toString(36).substring(2, 12);
+      try {
+        const saved = localStorage.getItem('ziko_fm_device_id');
+        if (saved) return saved;
+        localStorage.setItem('ziko_fm_device_id', fresh);
+      } catch (e) {}
+      return fresh;
+    }
+    const deviceId = getDeviceId();
+
+    // تهيئة Firebase بأمان مع معالجة أي أخطاء أو قيود قواعد
+    let db = null;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+    } catch (err) {
+      console.warn('Firebase initialization warning:', err);
+    }
+
+    // مراجع الصوت والشبكة
+    let hostPeer = null;
+    let listenerPeer = null;
+    let currentMediaCall = null;
+    const activeHostCalls = new Map();
+
+    let audioCtx = null;
+    let studioMixDest = null;
+    let micStream = null;
+    let micGainNode = null;
+    let trackGainNode = null;
+    let trackMediaSourceConnected = false;
+    let bgSynthTimer = null;
+    let bgSynthGain = null;
+    let studioAnalyser = null;
+    let studioVuRaf = null;
+    let activeBroadcastSessionId = null;
+    let broadcastHeartbeatTimer = null;
+
+    // عناصر DOM
+    const radioApp = document.getElementById('radioApp');
+    const audioPlayer = document.getElementById('radioAudioPlayer');
+    const studioTrackPlayer = document.getElementById('studioTrackPlayer');
+    const powerBtn = document.getElementById('powerBtn');
+    const tuningNeedle = document.getElementById('tuningNeedle');
+    const programTitle = document.getElementById('programTitle');
+    const listenerCountEl = document.getElementById('listenerCount');
+    const liveStatusText = document.getElementById('liveStatusText');
+    const headerStatusLabel = document.getElementById('headerStatusLabel');
+    const headerStatusDot = document.getElementById('headerStatusDot');
+    const freqDisplay = document.getElementById('freqDisplay');
+    const signalBar = document.getElementById('signalBar');
+    const volPercentBadge = document.getElementById('volPercentBadge');
+    const volumeKnob = document.getElementById('volumeKnob');
+    const volumeKnobBase = document.getElementById('volumeKnobBase');
+    const vuNeedle = document.getElementById('vuNeedle');
+    const offlineNoticeBar = document.getElementById('offlineNoticeBar');
+    const switchToQuranBannerBtn = document.getElementById('switchToQuranBannerBtn');
+    const openStudioFromBannerBtn = document.getElementById('openStudioFromBannerBtn');
+    const quickSwitchBtn = document.getElementById('quickSwitchBtn');
+    const quickSwitchLabel = document.getElementById('quickSwitchLabel');
+    const pinnedBannerBox = document.getElementById('pinnedBannerBox');
+    const pinnedBannerText = document.getElementById('pinnedBannerText');
+    const studioLiveDot = document.getElementById('studioLiveDot');
+    const keyZikoSub = document.getElementById('keyZikoSub');
+
+    const keyZikoLive = document.getElementById('keyZikoLive');
+    const keyQuranLive = document.getElementById('keyQuranLive');
+    const keyLiveChat = document.getElementById('keyLiveChat');
+    const keySchedule = document.getElementById('keySchedule');
+
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // =========================================================================
+    // 1. المزامنة عبر Firebase Realtime Database
+    // =========================================================================
+    function initFirebaseSync() {
+      if (!db) return;
+
+      try {
+        const connectedRef = ref(db, '.info/connected');
+        onValue(connectedRef, (snap) => {
+          state.firebaseConnected = Boolean(snap.val());
+          if (state.firebaseConnected) {
+            registerPresenceInFirebase();
+            if (state.isBroadcasting) {
+              publishBroadcastState();
+            }
+          }
+          const status = document.getElementById('chatConnStatus');
+          if (status) status.textContent = state.firebaseConnected ? 'دردشة مباشرة' : 'جاري الاتصال...';
+        }, (err) => {
+          console.warn('Firebase connection listener error:', err);
+        });
+
+        onValue(ref(db, DB_PATHS.liveState), (snap) => {
+          const data = snap.val();
+          if (data) handleRemoteStateUpdate(data);
+        }, (err) => {
+          console.warn('Firebase live_state read error:', err);
+        });
+
+        onValue(ref(db, DB_PATHS.pinnedAd), (snap) => {
+          const val = snap.val();
+          state.pinnedNotice = sanitizeStationText(typeof val === 'string' ? val : (val && val.text ? val.text : ''), '');
+          updatePinnedBanner();
+        }, (err) => {
+          console.warn('Firebase pinned_ad read error:', err);
+        });
+
+        onValue(ref(db, DB_PATHS.chat), (snap) => {
+          const val = snap.val();
+          if (!val) {
+            state.chatMessages = [];
+          } else {
+            const list = Object.entries(val).map(([key, item]) => ({
+              id: key,
+              sender: sanitizeStationText(item && item.sender, 'مستمع زيكو'),
+              text: item && item.text ? item.text : '',
+              isHost: Boolean(item && item.isHost),
+              uid: String((item && item.uid) || ''),
+              createdAt: item && item.createdAt ? item.createdAt : 0
+            }));
+            list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            state.chatMessages = list.slice(-100);
+          }
+
+          if (state.currentModal === 'chat') renderChatMessagesList();
+          if (state.currentModal === 'studio') renderStudioChatList();
+        }, (err) => {
+          console.warn('Firebase chat read error:', err);
+        });
+
+        onValue(ref(db, DB_PATHS.moderation), (snap) => {
+          const val = snap.val() || {};
+          state.chatLocked = Boolean(val.locked);
+          state.bannedUsers = val.banned || {};
+          applyChatPermissions();
+          renderModerationPanel();
+        }, (err) => {
+          console.warn('Firebase moderation read error:', err);
+        });
+
+        onValue(ref(db, DB_PATHS.presence), (snap) => {
+          state.onlinePeersMap = snap.val() || {};
+          cleanupStalePresence();
+        }, (err) => {
+          console.warn('Firebase presence read error:', err);
+        });
+
+        setInterval(() => {
+          registerPresenceInFirebase();
+          cleanupStalePresence();
+          if (state.isBroadcasting) {
+            publishBroadcastState();
+          }
+        }, 12000);
+      } catch (err) {
+        console.warn('Firebase initFirebaseSync error:', err);
+      }
+    }
+
+    function startBroadcastHeartbeat() {
+      stopBroadcastHeartbeat();
+      broadcastHeartbeatTimer = setInterval(() => {
+        if (state.isBroadcasting) {
+          publishBroadcastState();
+        }
+      }, 8000);
+    }
+
+    function stopBroadcastHeartbeat() {
+      if (broadcastHeartbeatTimer) {
+        clearInterval(broadcastHeartbeatTimer);
+        broadcastHeartbeatTimer = null;
+      }
+    }
+
+    function registerPresenceInFirebase() {
+      if (!db) return;
+      try {
+        const myPresenceRef = ref(db, `${DB_PATHS.presence}/${clientId}`);
+        onDisconnect(myPresenceRef).remove().catch(() => {});
+        set(myPresenceRef, {
+          id: clientId,
+          ts: Date.now(),
+          isLiveHost: state.isBroadcasting
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    function cleanupStalePresence() {
+      const now = Date.now();
+      let count = 0;
+      for (const [, info] of Object.entries(state.onlinePeersMap || {})) {
+        const ts = typeof info === 'object' && info ? info.ts : info;
+        if (ts && now - ts < 45000) count++;
+      }
+      state.activeListenersCount = Math.max(1, count);
+      listenerCountEl.textContent = `${state.activeListenersCount}`;
+      const badge = document.getElementById('studioListenerBadge');
+      if (badge) badge.textContent = `${state.activeListenersCount} مستمع متصل`;
+    }
+
+    function handleRemoteStateUpdate(data) {
+      if (state.isBroadcasting && data.senderId === clientId) return;
+
+      const wasLive = state.remoteBroadcast.isLive;
+      const prevPeerId = state.remoteBroadcast.broadcasterPeerId;
+      const prevSessionId = state.remoteBroadcast.sessionId;
+      const prevStreamUrl = state.remoteBroadcast.externalStreamUrl;
+
+      const sanitizedData = {
+        ...data,
+        showTitle: data.showTitle ? sanitizeStationText(data.showTitle, DEFAULT_SHOW_TITLE) : state.showTitle,
+        hostName: data.hostName ? sanitizeStationText(data.hostName, DEFAULT_HOST_TAGLINE) : state.hostName
+      };
+
+      state.remoteBroadcast = {
+        ...state.remoteBroadcast,
+        ...sanitizedData
+      };
+
+      state.showTitle = sanitizedData.showTitle;
+      state.hostName = sanitizedData.hostName;
+      if (data.scheduleText) state.scheduleText = sanitizeStationText(data.scheduleText, DEFAULT_SCHEDULE);
+      if (typeof data.externalStreamUrl === 'string') state.externalStreamUrl = data.externalStreamUrl;
+
+      updateModeUI();
+
+      if (state.isOn && state.mode === 'ziko' && !state.isBroadcasting) {
+        if (data.isLive && data.broadcasterPeerId && (!wasLive || prevPeerId !== data.broadcasterPeerId || prevSessionId !== data.sessionId)) {
+          offlineNoticeBar.classList.add('hidden');
+          connectListenerToPeerHost(data.broadcasterPeerId);
+        } else if (data.isLive && data.externalStreamUrl && (!wasLive || prevStreamUrl !== data.externalStreamUrl)) {
+          offlineNoticeBar.classList.add('hidden');
+          playExternalStreamUrl(data.externalStreamUrl);
+        } else if (!data.isLive && wasLive) {
+          disconnectListenerPeer();
+          startCurrentStream();
+        } else {
+          updateStatusIndicators();
+        }
+      }
+    }
+
+    function publishBroadcastState(overrides = {}) {
+      const updated = {
+        senderId: clientId,
+        isLive: state.isBroadcasting,
+        hasMic: state.hasActiveMic,
+        broadcastMode: state.isBroadcasting ? state.broadcastMode : 'offline',
+        broadcasterPeerId: state.isBroadcasting && hostPeer && hostPeer.id ? hostPeer.id : '',
+        showTitle: state.showTitle,
+        hostName: state.hostName,
+        scheduleText: state.scheduleText,
+        externalStreamUrl: state.externalStreamUrl,
+        breakTitle: state.currentBreakTitle,
+        sessionId: activeBroadcastSessionId || '',
+        updatedAt: Date.now(),
+        ...overrides
+      };
+
+      state.remoteBroadcast = { ...state.remoteBroadcast, ...updated };
+      updateModeUI();
+      registerPresenceInFirebase();
+
+      if (!db) return;
+      try {
+        const liveStateRef = ref(db, DB_PATHS.liveState);
+        if (state.isBroadcasting) {
+          onDisconnect(liveStateRef).set({
+            senderId: clientId,
+            isLive: false,
+            hasMic: false,
+            broadcastMode: 'offline',
+            broadcasterPeerId: '',
+            showTitle: state.showTitle,
+            hostName: state.hostName,
+            scheduleText: state.scheduleText,
+            externalStreamUrl: state.externalStreamUrl,
+            breakTitle: '',
+            sessionId: '',
+            updatedAt: Date.now()
+          }).catch(() => {});
+        } else {
+          onDisconnect(liveStateRef).cancel().catch(() => {});
+        }
+        set(liveStateRef, updated).catch((err) => {
+          console.warn('Firebase live_state write error:', err);
+        });
+      } catch (e) {}
+    }
+
+    function publishStationInfo() {
+      if (state.isBroadcasting) {
+        publishBroadcastState();
+        return;
+      }
+      if (!db) return;
+      update(ref(db, DB_PATHS.liveState), {
+        senderId: clientId,
+        showTitle: state.showTitle,
+        hostName: state.hostName,
+        scheduleText: state.scheduleText,
+        externalStreamUrl: state.externalStreamUrl,
+        studioPin: null
+      }).catch(() => showToast('تعذر نشر التحديث'));
+    }
+
+    function publishPinnedNotice(noticeText) {
+      const clean = (noticeText || '').trim();
+      state.pinnedNotice = clean;
+      updatePinnedBanner();
+      if (!db) return;
+      try {
+        set(ref(db, DB_PATHS.pinnedAd), clean).catch((err) => {
+          console.warn('Firebase pinned_ad write error:', err);
+        });
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 2. الصوت الميكانيكي (تكة فقط افتراضياً) وميكسر الصوت الموحد
+    // =========================================================================
+    function initAudioContext() {
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioCtx();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function playMechanicalClick() {
+      try {
+        initAudioContext();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(920, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.04);
+
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } catch (e) {}
+    }
+
+    function playTuningStatic(duration = 0.45) {
+      if (!state.staticSoundEnabled) return;
+      try {
+        initAudioContext();
+        const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = (Math.random() * 2 - 1) * 0.2;
+        }
+
+        const whiteNoise = audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+
+        const bandpass = audioCtx.createBiquadFilter();
+        bandpass.type = 'bandpass';
+        bandpass.frequency.value = 1350;
+        bandpass.Q.value = 1.2;
+
+        const gainNode = audioCtx.createGain();
+        const now = audioCtx.currentTime;
+        gainNode.gain.setValueAtTime(0.01, now);
+        gainNode.gain.linearRampToValueAtTime(0.12 * state.volume, now + 0.08);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        whiteNoise.connect(bandpass);
+        bandpass.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        whiteNoise.start(now);
+        whiteNoise.stop(now + duration);
+      } catch (e) {}
+    }
+
+    function ensureStudioMixer() {
+      initAudioContext();
+      if (!studioMixDest) {
+        studioMixDest = audioCtx.createMediaStreamDestination();
+        studioAnalyser = audioCtx.createAnalyser();
+        studioAnalyser.fftSize = 128;
+
+        const keepAliveOsc = audioCtx.createOscillator();
+        const keepAliveGain = audioCtx.createGain();
+        keepAliveOsc.frequency.value = 40;
+        keepAliveGain.gain.value = 0.00005;
+        keepAliveOsc.connect(keepAliveGain);
+        keepAliveGain.connect(studioMixDest);
+        keepAliveOsc.start();
+
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
+        compressor.knee.setValueAtTime(20, audioCtx.currentTime);
+        compressor.ratio.setValueAtTime(6, audioCtx.currentTime);
+        compressor.attack.setValueAtTime(0.005, audioCtx.currentTime);
+        compressor.release.setValueAtTime(0.2, audioCtx.currentTime);
+
+        compressor.connect(studioAnalyser);
+        studioAnalyser.connect(studioMixDest);
+        studioMixDest.masterInput = compressor;
+      }
+
+      if (!trackMediaSourceConnected) {
+        try {
+          const trackSource = audioCtx.createMediaElementSource(studioTrackPlayer);
+          trackGainNode = audioCtx.createGain();
+          trackGainNode.gain.value = 0.95;
+          trackSource.connect(trackGainNode);
+          trackGainNode.connect(studioMixDest.masterInput);
+          trackGainNode.connect(audioCtx.destination);
+          trackMediaSourceConnected = true;
+        } catch (e) {}
+      }
+    }
+
+    function startSynthesizedMusicBed(style = 'talk') {
+      stopSynthesizedMusicBed();
+      ensureStudioMixer();
+
+      bgSynthGain = audioCtx.createGain();
+      bgSynthGain.gain.setValueAtTime(style === 'intro' ? 0.35 : state.bgMusicVolume * 0.45, audioCtx.currentTime);
+      bgSynthGain.connect(studioMixDest.masterInput);
+      bgSynthGain.connect(audioCtx.destination);
+
+      const chords = style === 'intro'
+        ? [[261.63, 329.63, 392.00], [293.66, 349.23, 440.00], [329.63, 392.00, 493.88], [392.00, 493.88, 587.33]]
+        : [[220.00, 261.63, 329.63], [196.00, 246.94, 293.66], [174.61, 220.00, 261.63], [196.00, 246.94, 293.66]];
+
+      let step = 0;
+      const playChord = () => {
+        if (!audioCtx || !bgSynthGain) return;
+        const now = audioCtx.currentTime;
+        const notes = chords[step % chords.length];
+        step++;
+
+        notes.forEach((freq) => {
+          const osc = audioCtx.createOscillator();
+          const noteGain = audioCtx.createGain();
+          osc.type = style === 'intro' ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          noteGain.gain.setValueAtTime(0.001, now);
+          noteGain.gain.linearRampToValueAtTime(0.22, now + 0.2);
+          noteGain.gain.exponentialRampToValueAtTime(0.001, now + 1.65);
+
+          osc.connect(noteGain);
+          noteGain.connect(bgSynthGain);
+          osc.start(now);
+          osc.stop(now + 1.7);
+        });
+      };
+
+      playChord();
+      bgSynthTimer = setInterval(playChord, style === 'intro' ? 900 : 1750);
+    }
+
+    function stopSynthesizedMusicBed() {
+      if (bgSynthTimer) {
+        clearInterval(bgSynthTimer);
+        bgSynthTimer = null;
+      }
+      if (bgSynthGain) {
+        try { bgSynthGain.disconnect(); } catch (e) {}
+        bgSynthGain = null;
+      }
+    }
+
+    // =========================================================================
+    // 3. البث المباشر من استوديو المذيع (PeerJS + فواصل/أغاني + رابط بث)
+    // =========================================================================
+    function getMicDiagnosticMessage(err = null) {
+      const name = err && err.name ? err.name : '';
+      if (!window.isSecureContext) {
+        return 'المايك يحتاج فتح الصفحة برابط https وليس كملف داخلي.';
+      }
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+        return 'الإذن مرفوض: فعّل الميكروفون من إعدادات الهاتف ← التطبيقات ← الأذونات. إن لم يظهر الإذن استخدم زر "سجّل بصوتك وأذِعه" بالأسفل، أو افتح الاستوديو من Chrome.';
+      }
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        return 'لم يتم العثور على ميكروفون بالجهاز.';
+      }
+      if (name === 'NotReadableError' || name === 'TrackStartError' || name === 'AbortError') {
+        return 'الميكروفون مشغول (مكالمة أو تطبيق تسجيل) — أغلقه ثم أعد المحاولة.';
+      }
+      return `تعذر تشغيل الميكروفون ${name ? '(' + name + ')' : ''} — جرّب من متصفح Chrome.`;
+    }
+
+    let micErrorText = '';
+    let wakeLock = null;
+
+    async function keepScreenAwake() {
+      try {
+        if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+      } catch (e) {}
+    }
+
+    function releaseScreen() {
+      if (wakeLock) wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+
+    function releaseMic() {
+      if (micGainNode) {
+        try { micGainNode.disconnect(); } catch (e) {}
+        micGainNode = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(t => { t.onended = null; t.stop(); });
+        micStream = null;
+      }
+      state.hasActiveMic = false;
+    }
+
+    // يطلب المايك ويوصله بالميكسر
+    async function attachMicrophone() {
+      ensureStudioMixer();
+      releaseMic();
+      const result = await requestMicrophoneStreamWithFallback();
+      if (!result.stream) {
+        micErrorText = getMicDiagnosticMessage(result.error);
+        return false;
+      }
+      if (audioCtx.state !== 'running') {
+        audioCtx.resume().catch(() => {}); // بدون انتظار حتى لا يتعلق على بعض الهواتف
+      }
+      micStream = result.stream;
+      micGainNode = audioCtx.createGain();
+      micGainNode.gain.value = state.micMuted ? 0 : 1.0;
+      audioCtx.createMediaStreamSource(micStream).connect(micGainNode);
+      micGainNode.connect(studioMixDest.masterInput);
+      micStream.getAudioTracks()[0].onended = () => {
+        releaseMic();
+        micErrorText = 'انقطع المايك — اضغط "تفعيل المايك" مرة أخرى.';
+        showToast(micErrorText);
+        if (state.isBroadcasting) publishBroadcastState();
+        if (state.currentModal === 'studio') renderStudioContent();
+      };
+      state.hasActiveMic = true;
+      micErrorText = '';
+      return true;
+    }
+
+    async function enableMicDuringBroadcast() {
+      if (await attachMicrophone()) {
+        returnFromBreakToMic();
+      } else {
+        showToast(micErrorText);
+        if (state.currentModal === 'studio') renderStudioContent();
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || !state.isBroadcasting) return;
+      if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
+      keepScreenAwake();
+    });
+
+    function createHostPeerServer() {
+      return new Promise((resolve, reject) => {
+        if (typeof Peer === 'undefined') {
+          reject(new Error('PeerJS غير متاح'));
+          return;
+        }
+        if (hostPeer && !hostPeer.destroyed && hostPeer.id) {
+          resolve(hostPeer.id);
+          return;
+        }
+
+        const customHostId = `zikofm_host_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        hostPeer = new Peer(customHostId, PEER_CONFIG);
+        const peer = hostPeer;
+        const timeout = setTimeout(() => {
+          peer.destroy();
+          reject(new Error('timeout'));
+        }, 15000);
+
+        peer.on('open', (id) => { clearTimeout(timeout); resolve(id); });
+        peer.on('disconnected', () => {
+          setTimeout(() => { if (!peer.destroyed && peer.disconnected) peer.reconnect(); }, 2000);
+        });
+        hostPeer.on('call', (call) => {
+          if (!studioMixDest) ensureStudioMixer();
+          call.answer(studioMixDest.stream);
+          activeHostCalls.set(call.peer, call);
+          call.on('close', () => activeHostCalls.delete(call.peer));
+          call.on('error', () => activeHostCalls.delete(call.peer));
+        });
+        peer.on('error', (err) => {
+          console.warn('Host peer error:', err);
+          if (!peer.open) { clearTimeout(timeout); reject(err); }
+        });
+      });
+    }
+
+    async function requestMicrophoneStreamWithFallback() {
+      const mediaDevices =
+        navigator.mediaDevices ||
+        (navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.getUserMedia
+          ? {
+              getUserMedia: (constraints) =>
+                new Promise((resolve, reject) => {
+                  const legacyGetUserMedia =
+                    navigator.webkitGetUserMedia ||
+                    navigator.mozGetUserMedia ||
+                    navigator.getUserMedia;
+                  legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+                })
+            }
+          : null);
+
+      if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
+        return { stream: null, error: new Error('getUserMedia غير متاح') };
+      }
+
+      const candidateConstraints = [
+        { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } },
+        { audio: true }
+      ];
+
+      let lastErr = null;
+      for (const constraints of candidateConstraints) {
+        try {
+          const stream = await mediaDevices.getUserMedia(constraints);
+          if (stream && stream.getAudioTracks().length > 0) {
+            return { stream, error: null };
+          }
+        } catch (err) {
+          lastErr = err;
+          if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+            break;
+          }
+        }
+      }
+
+      return { stream: null, error: lastErr };
+    }
+
+    let startingBroadcast = false;
+
+    async function startPhoneLiveBroadcast(audioOnlyMode = false) {
+      if (startingBroadcast) return;
+      startingBroadcast = true;
+      try {
+        ensureStudioMixer();
+        // طلب المايك أولاً ومباشرة بعد ضغطة الزر
+        const micGranted = audioOnlyMode ? false : await attachMicrophone();
+        if (!audioOnlyMode && !micGranted) {
+          // لا نبدأ بثاً صامتاً بدون علم المذيع
+          showToast(micErrorText);
+          if (state.currentModal === 'studio') renderStudioContent();
+          return;
+        }
+
+        showToast('جاري بدء البث المباشر...');
+        let peerId = '';
+        try {
+          peerId = await createHostPeerServer();
+        } catch (e) {
+          releaseMic();
+          if (hostPeer) { hostPeer.destroy(); hostPeer = null; }
+          showToast('تعذر الاتصال بخادم البث — تأكد من الإنترنت وحاول مرة أخرى');
+          if (state.currentModal === 'studio') renderStudioContent();
+          return;
+        }
+
+        state.isBroadcasting = true;
+        state.broadcastMode = micGranted ? 'mic' : 'break';
+        activeBroadcastSessionId = 'live_' + Date.now();
+        studioLiveDot.classList.remove('hidden');
+        startBroadcastHeartbeat();
+        keepScreenAwake();
+
+        if (!micGranted) {
+          state.currentBreakTitle = 'بث ZIKO FM المباشر • فواصل وموسيقى';
+          startSynthesizedMusicBed('intro');
+        } else {
+          state.currentBreakTitle = '';
+        }
+
+        publishBroadcastState({
+          isLive: true,
+          broadcasterPeerId: peerId,
+          sessionId: activeBroadcastSessionId
+        });
+
+        showToast(micGranted
+          ? 'أنت الآن على الهواء بصوتك — خلي الشاشة مفتوحة'
+          : 'بدأ البث المباشر للفواصل والأغاني');
+
+        if (state.currentModal === 'studio') renderStudioContent();
+        startStudioVuLoop();
+      } finally {
+        startingBroadcast = false;
+      }
+    }
+
+    function startExternalStreamBroadcast() {
+      const url = (state.externalStreamUrl || '').trim();
+      if (!url) {
+        showToast('أدخل رابط البث المباشر أولاً في الإعدادات');
+        return;
+      }
+
+      state.isBroadcasting = true;
+      state.broadcastMode = 'stream';
+      state.currentBreakTitle = 'بث صوتي مباشر عبر الرابط';
+      activeBroadcastSessionId = 'stream_' + Date.now();
+      studioLiveDot.classList.remove('hidden');
+      startBroadcastHeartbeat();
+
+      publishBroadcastState({
+        isLive: true,
+        hasMic: false,
+        broadcastMode: 'stream',
+        externalStreamUrl: url,
+        breakTitle: state.currentBreakTitle,
+        sessionId: activeBroadcastSessionId
+      });
+
+      showToast('تم بدء البث عبر رابط البث المباشر للجميع!');
+      if (state.currentModal === 'studio') renderStudioContent();
+    }
+
+    async function stopPhoneLiveBroadcast() {
+      stopBroadcastHeartbeat();
+      state.isBroadcasting = false;
+      state.hasActiveMic = false;
+      state.broadcastMode = 'offline';
+      state.currentBreakTitle = '';
+      studioLiveDot.classList.add('hidden');
+
+      stopSynthesizedMusicBed();
+      studioTrackPlayer.pause();
+
+      releaseMic();
+      releaseScreen();
+
+      activeHostCalls.forEach((call) => {
+        try { call.close(); } catch (e) {}
+      });
+      activeHostCalls.clear();
+
+      if (hostPeer) {
+        try { hostPeer.destroy(); } catch (e) {}
+        hostPeer = null;
+      }
+
+      if (studioVuRaf) {
+        cancelAnimationFrame(studioVuRaf);
+        studioVuRaf = null;
+      }
+
+      publishBroadcastState({
+        isLive: false,
+        hasMic: false,
+        broadcastMode: 'offline',
+        broadcasterPeerId: '',
+        breakTitle: '',
+        sessionId: ''
+      });
+
+      showToast('تم إنهاء البث المباشر');
+      if (state.currentModal === 'studio') renderStudioContent();
+    }
+
+    function toggleBroadcasterMicMute() {
+      if (!state.hasActiveMic) {
+        showToast('الميكروفون غير مفعل في هذه الجلسة');
+        return;
+      }
+      state.micMuted = !state.micMuted;
+      if (micGainNode && audioCtx) {
+        micGainNode.gain.setValueAtTime(state.micMuted ? 0 : 1.0, audioCtx.currentTime);
+      }
+      if (state.currentModal === 'studio') renderStudioContent();
+    }
+
+    async function triggerCommercialOrSongBreak(trackItem = null) {
+      ensureStudioMixer();
+
+      state.currentBreakTitle = trackItem ? trackItem.name : 'فاصل إعلاني وموسيقى ZIKO FM';
+      state.broadcastMode = 'break';
+
+      if (micGainNode && audioCtx) {
+        micGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      }
+
+      if (trackItem && trackItem.isBuiltIn) {
+        studioTrackPlayer.pause();
+        startSynthesizedMusicBed(trackItem.style || 'intro');
+      } else if (trackItem && trackItem.url) {
+        stopSynthesizedMusicBed();
+        studioTrackPlayer.src = trackItem.url;
+        studioTrackPlayer.play().catch(() => {
+          showToast('تعذر تشغيل الملف الصوتي المختار');
+        });
+      } else {
+        startSynthesizedMusicBed('intro');
+      }
+
+      let peerId = hostPeer && hostPeer.id ? hostPeer.id : '';
+      if (!state.isBroadcasting) {
+        try {
+          peerId = await createHostPeerServer();
+        } catch (e) {}
+        state.isBroadcasting = true;
+        activeBroadcastSessionId = 'live_' + Date.now();
+        studioLiveDot.classList.remove('hidden');
+        startStudioVuLoop();
+      }
+
+      publishBroadcastState({
+        isLive: true,
+        hasMic: state.hasActiveMic,
+        broadcastMode: 'break',
+        broadcasterPeerId: peerId,
+        breakTitle: state.currentBreakTitle,
+        sessionId: activeBroadcastSessionId
+      });
+
+      showToast(`يُبث الآن للجميع: ${state.currentBreakTitle}`);
+      if (state.currentModal === 'studio') renderStudioContent();
+    }
+
+    async function returnFromBreakToMic() {
+      if (!state.hasActiveMic) {
+        if (!state.isBroadcasting) {
+          await startPhoneLiveBroadcast(false);
+          return;
+        }
+        if (!(await attachMicrophone())) {
+          showToast(micErrorText);
+          return;
+        }
+      }
+
+      state.broadcastMode = 'mic';
+      state.currentBreakTitle = '';
+      studioTrackPlayer.pause();
+
+      stopSynthesizedMusicBed();
+
+      if (micGainNode && audioCtx) {
+        micGainNode.gain.setValueAtTime(state.micMuted ? 0 : 1.0, audioCtx.currentTime);
+      }
+
+      publishBroadcastState({
+        isLive: true,
+        hasMic: true,
+        broadcastMode: 'mic',
+        breakTitle: ''
+      });
+
+      showToast('عدت الآن للحديث المباشر بالمايك');
+      if (state.currentModal === 'studio') renderStudioContent();
+    }
+
+    studioTrackPlayer.addEventListener('ended', () => {
+      if (state.broadcastMode === 'break' && state.hasActiveMic) {
+        returnFromBreakToMic();
+      }
+    });
+
+    // =========================================================================
+    // 4. تشغيل البث لدى المستمعين (PeerJS + رابط البث المباشر + إذاعة القرآن)
+    // =========================================================================
+    function createSilentDummyStream() {
+      initAudioContext();
+      const dst = audioCtx.createMediaStreamDestination();
+      return dst.stream;
+    }
+
+    let listenerRetryTimer = null;
+
+    function scheduleListenerRetry() {
+      clearTimeout(listenerRetryTimer);
+      listenerRetryTimer = setTimeout(() => {
+        const live = state.remoteBroadcast;
+        if (state.isOn && state.mode === 'ziko' && !state.isBroadcasting && live.isLive && live.broadcasterPeerId) {
+          connectListenerToPeerHost(live.broadcasterPeerId);
+        }
+      }, 5000);
+    }
+
+    function connectListenerToPeerHost(targetHostPeerId) {
+      if (!targetHostPeerId || typeof Peer === 'undefined') return;
+      disconnectListenerPeer();
+
+      liveStatusText.textContent = 'جاري الاتصال باستوديو زيكو...';
+      signalBar.style.width = '65%';
+
+      const listenerUniqueId = `zikofm_lst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      listenerPeer = new Peer(listenerUniqueId, PEER_CONFIG);
+
+      listenerPeer.on('open', () => {
+        const dummyStream = createSilentDummyStream();
+        currentMediaCall = listenerPeer.call(targetHostPeerId, dummyStream);
+        if (!currentMediaCall) return;
+
+        currentMediaCall.on('stream', (remoteStream) => {
+          audioPlayer.removeAttribute('src');
+          audioPlayer.srcObject = remoteStream;
+          audioPlayer.volume = state.volume;
+          audioPlayer.play()
+            .then(() => {
+              signalBar.style.width = '98%';
+              offlineNoticeBar.classList.add('hidden');
+              updateStatusIndicators();
+            })
+            .catch(() => {
+              liveStatusText.textContent = 'اضغط تشغيل لسماع البث';
+            });
+        });
+
+        const call = currentMediaCall;
+        call.on('close', () => {
+          if (call !== currentMediaCall) return;
+          if (state.remoteBroadcast.isLive) scheduleListenerRetry();
+          else if (state.isOn && state.mode === 'ziko') startCurrentStream();
+        });
+        call.on('error', () => { if (call === currentMediaCall) scheduleListenerRetry(); });
+      });
+
+      listenerPeer.on('error', () => {
+        if (state.remoteBroadcast.externalStreamUrl) {
+          playExternalStreamUrl(state.remoteBroadcast.externalStreamUrl);
+        } else {
+          liveStatusText.textContent = 'جاري إعادة الاتصال...';
+          scheduleListenerRetry();
+        }
+      });
+    }
+
+    function disconnectListenerPeer() {
+      clearTimeout(listenerRetryTimer);
+      const oldCall = currentMediaCall;
+      const oldPeer = listenerPeer;
+      currentMediaCall = null;
+      listenerPeer = null;
+      if (oldCall) { try { oldCall.close(); } catch (e) {} }
+      if (oldPeer) { try { oldPeer.destroy(); } catch (e) {} }
+      if (audioPlayer.srcObject) {
+        audioPlayer.srcObject = null;
+      }
+    }
+
+    function playExternalStreamUrl(streamUrl) {
+      if (!streamUrl) return;
+      disconnectListenerPeer();
+      audioPlayer.srcObject = null;
+      audioPlayer.src = streamUrl;
+      audioPlayer.volume = state.volume;
+      audioPlayer.play()
+        .then(() => {
+          signalBar.style.width = '95%';
+          offlineNoticeBar.classList.add('hidden');
+          updateStatusIndicators();
+        })
+        .catch(() => {
+          liveStatusText.textContent = 'تعذر تشغيل رابط البث';
+        });
+    }
+
+    // =========================================================================
+    // 5. تحديث الواجهة والحالة والتشغيل
+    // =========================================================================
+    function updatePinnedBanner() {
+      const notice = (state.pinnedNotice || '').trim();
+      if (notice) {
+        pinnedBannerText.textContent = notice;
+        pinnedBannerBox.classList.remove('hidden');
+      } else {
+        pinnedBannerBox.classList.add('hidden');
+      }
+    }
+
+    function updateStatusIndicators() {
+      const isZikoLive = state.isBroadcasting || state.remoteBroadcast.isLive;
+      const bMode = state.isBroadcasting ? state.broadcastMode : state.remoteBroadcast.broadcastMode;
+      const activeStreamUrl = state.remoteBroadcast.externalStreamUrl || state.externalStreamUrl;
+
+      if (state.mode === 'quran') {
+        headerStatusLabel.textContent = state.isOn ? 'إذاعة القرآن الكريم' : 'في انتظار البث';
+        headerStatusDot.className = state.isOn
+          ? 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#4ade80]'
+          : 'w-2 h-2 rounded-full bg-stone-400';
+      } else if (isZikoLive && bMode === 'break') {
+        headerStatusLabel.textContent = 'فاصل إعلاني / موسيقى';
+        headerStatusDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+      } else if (isZikoLive || activeStreamUrl) {
+        headerStatusLabel.textContent = 'مباشر الآن';
+        headerStatusDot.className = 'w-2 h-2 rounded-full bg-red-500 animate-ping';
+      } else {
+        headerStatusLabel.textContent = 'في انتظار البث';
+        headerStatusDot.className = 'w-2 h-2 rounded-full bg-stone-400';
+      }
+
+      if (!state.isOn) {
+        liveStatusText.textContent = state.mode === 'quran' ? 'إذاعة القرآن الكريم' : 'في انتظار البث';
+        return;
+      }
+
+      if (state.mode === 'quran') {
+        liveStatusText.textContent = 'إذاعة القرآن الكريم • مباشر';
+      } else if (isZikoLive && bMode === 'break') {
+        liveStatusText.textContent = 'فاصل إعلاني / موسيقى 🎵';
+      } else if (isZikoLive) {
+        liveStatusText.textContent = 'مباشر الآن 🔴';
+      } else if (activeStreamUrl) {
+        liveStatusText.textContent = 'مباشر الآن • بث صوتي';
+      } else {
+        liveStatusText.textContent = 'في انتظار البث';
+      }
+    }
+
+    function updateModeUI() {
+      const isQuran = state.mode === 'quran';
+
+      radioApp.classList.toggle('quran-mode', isQuran);
+      keyZikoLive.classList.toggle('active-key', !isQuran);
+      keyQuranLive.classList.toggle('active-key', isQuran);
+
+      if (isQuran) {
+        offlineNoticeBar.classList.add('hidden');
+        tuningNeedle.style.left = '34%';
+        freqDisplay.textContent = '98.2 FM';
+        programTitle.textContent = 'تلاوات مباركة - إذاعة القرآن الكريم';
+        listenerCountEl.textContent = `${state.activeListenersCount}`;
+        quickSwitchLabel.textContent = 'زيكو FM';
+      } else {
+        tuningNeedle.style.left = '62%';
+        freqDisplay.textContent = '98.5 FM';
+        const bMode = state.isBroadcasting ? state.broadcastMode : state.remoteBroadcast.broadcastMode;
+        const activeBreak = state.isBroadcasting ? state.currentBreakTitle : state.remoteBroadcast.breakTitle;
+        const cleanTitle = sanitizeStationText(state.showTitle, DEFAULT_SHOW_TITLE);
+        const cleanSub = sanitizeStationText(state.hostName, DEFAULT_HOST_TAGLINE);
+
+        if (bMode === 'break' && activeBreak) {
+          programTitle.textContent = `🎵 ${activeBreak}`;
+        } else {
+          programTitle.textContent = cleanTitle;
+        }
+
+        keyZikoSub.textContent = cleanSub;
+        listenerCountEl.textContent = `${state.activeListenersCount}`;
+        quickSwitchLabel.textContent = 'القرآن';
+      }
+
+      updateStatusIndicators();
+    }
+
+    function switchMode(newMode, autoTurnOn = true) {
+      state.mode = newMode;
+      offlineNoticeBar.classList.add('hidden');
+      updateModeUI();
+
+      if (autoTurnOn && !state.isOn) {
+        state.isOn = true;
+        radioApp.classList.add('radio-on');
+        startMetersAnimation();
+      }
+
+      if (state.isOn) {
+        liveStatusText.textContent = 'جاري التوليف...';
+        signalBar.style.width = '50%';
+        playTuningStatic(0.4);
+        setTimeout(() => {
+          if (state.isOn) startCurrentStream();
+        }, 220);
+      }
+    }
+
+    function togglePower() {
+      playMechanicalClick();
+      state.isOn = !state.isOn;
+
+      if (state.isOn) {
+        radioApp.classList.add('radio-on');
+        offlineNoticeBar.classList.add('hidden');
+        liveStatusText.textContent = 'جاري التوليف...';
+        signalBar.style.width = '45%';
+        playTuningStatic(0.4);
+        startMetersAnimation();
+
+        setTimeout(() => {
+          if (state.isOn) startCurrentStream();
+        }, 220);
+      } else {
+        radioApp.classList.remove('radio-on');
+        audioPlayer.pause();
+        disconnectListenerPeer();
+        signalBar.style.width = '0%';
+        offlineNoticeBar.classList.add('hidden');
+        updateStatusIndicators();
+        stopMetersAnimation();
+      }
+    }
+
+    let playToken = 0;
+
+    function startCurrentStream() {
+      const token = ++playToken;
+      audioPlayer.volume = state.volume;
+
+      if (state.mode === 'quran') {
+        disconnectListenerPeer();
+        const candidates = quranCandidates(state.quranStation);
+        let index = 0;
+        const tryNext = () => {
+          if (token !== playToken || !state.isOn || state.mode !== 'quran') return;
+          if (index >= candidates.length) {
+            liveStatusText.textContent = 'تعذر الاتصال بإذاعة القرآن';
+            signalBar.style.width = '20%';
+            return;
+          }
+          let settled = false;
+          const fail = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            tryNext();
+          };
+          const timer = setTimeout(() => { if (audioPlayer.readyState < 3) fail(); }, 9000);
+          audioPlayer.src = candidates[index++];
+          audioPlayer.play()
+            .then(() => {
+              settled = true;
+              clearTimeout(timer);
+              if (token !== playToken) return;
+              signalBar.style.width = '95%';
+              updateStatusIndicators();
+            })
+            .catch((err) => {
+              if (token !== playToken) return;
+              if (err && err.name === 'NotAllowedError') {
+                settled = true;
+                clearTimeout(timer);
+                liveStatusText.textContent = 'اضغط على زر القرآن مرة أخرى';
+                return;
+              }
+              fail();
+            });
+        };
+
+        tryNext();
+      } else {
+        if (state.remoteBroadcast.isLive && state.remoteBroadcast.broadcasterPeerId && !state.isBroadcasting) {
+          offlineNoticeBar.classList.add('hidden');
+          connectListenerToPeerHost(state.remoteBroadcast.broadcasterPeerId);
+          return;
+        }
+
+        const streamUrl = (state.remoteBroadcast.externalStreamUrl || state.externalStreamUrl || '').trim();
+        if (streamUrl) {
+          playExternalStreamUrl(streamUrl);
+          return;
+        }
+
+        audioPlayer.pause();
+        signalBar.style.width = '25%';
+        updateStatusIndicators();
+        offlineNoticeBar.classList.remove('hidden');
+      }
+    }
+
+    audioPlayer.addEventListener('error', () => {
+      if (!state.isOn) return;
+      if (state.mode === 'ziko' && !state.remoteBroadcast.isLive && !state.externalStreamUrl) {
+        offlineNoticeBar.classList.remove('hidden');
+        updateStatusIndicators();
+      }
+    });
+
+    // =========================================================================
+    // تحريك مؤشر VU وأعمدة الصوت وبكرة الصوت الدوارة
+    // =========================================================================
+    function startMetersAnimation() {
+      stopMetersAnimation();
+      const bars = document.querySelectorAll('.eq-bar');
+
+      state.vuInterval = setInterval(() => {
+        if (!state.isOn) return;
+        const isOfflineVisible = !offlineNoticeBar.classList.contains('hidden');
+        if (isOfflineVisible) {
+          vuNeedle.style.transform = 'translateX(-50%) rotate(-34deg)';
+          bars.forEach(bar => { bar.style.height = '5px'; });
+          return;
+        }
+
+        const randomAngle = -15 + Math.random() * 48 * state.volume;
+        vuNeedle.style.transform = `translateX(-50%) rotate(${randomAngle}deg)`;
+        bars.forEach(bar => {
+          bar.style.height = `${4 + Math.floor(Math.random() * 16)}px`;
+        });
+      }, 160);
+    }
+
+    function stopMetersAnimation() {
+      if (state.vuInterval) {
+        clearInterval(state.vuInterval);
+        state.vuInterval = null;
+      }
+      vuNeedle.style.transform = 'translateX(-50%) rotate(-38deg)';
+      document.querySelectorAll('.eq-bar').forEach(bar => {
+        bar.style.height = '6px';
+      });
+    }
+
+    function startStudioVuLoop() {
+      if (studioVuRaf) cancelAnimationFrame(studioVuRaf);
+      const dataArray = studioAnalyser ? new Uint8Array(studioAnalyser.frequencyBinCount) : null;
+
+      const tick = () => {
+        const meterBar = document.getElementById('studioMicLevelBar');
+        if (meterBar && studioAnalyser && dataArray) {
+          studioAnalyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const pct = Math.min(100, Math.round((sum / dataArray.length / 120) * 100));
+          meterBar.style.width = `${pct}%`;
+        }
+        studioVuRaf = requestAnimationFrame(tick);
+      };
+      studioVuRaf = requestAnimationFrame(tick);
+    }
+
+    function setVolume(newVol) {
+      state.volume = Math.max(0, Math.min(1, newVol));
+      audioPlayer.volume = state.volume;
+      volPercentBadge.textContent = `${Math.round(state.volume * 100)}%`;
+      const deg = -135 + state.volume * 270;
+      volumeKnob.style.transform = `rotate(${deg}deg)`;
+      saveLocalConfig();
+    }
+
+    let isDraggingKnob = false;
+    let startY = 0;
+    let startVol = 0.85;
+
+    volumeKnobBase.addEventListener('mousedown', (e) => {
+      isDraggingKnob = true;
+      startY = e.clientY;
+      startVol = state.volume;
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingKnob) return;
+      setVolume(startVol + (startY - e.clientY) / 120);
+    });
+    window.addEventListener('mouseup', () => { isDraggingKnob = false; });
+
+    volumeKnobBase.addEventListener('touchstart', (e) => {
+      isDraggingKnob = true;
+      startY = e.touches[0].clientY;
+      startVol = state.volume;
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      if (!isDraggingKnob) return;
+      setVolume(startVol + (startY - e.touches[0].clientY) / 120);
+    }, { passive: true });
+    window.addEventListener('touchend', () => { isDraggingKnob = false; });
+
+    volumeKnobBase.addEventListener('click', (e) => {
+      // السحب لا يُحسب ضغطة
+      if (Math.abs(e.clientY - startY) > 6) return;
+      setVolume(state.volume >= 0.95 ? 0.25 : state.volume + 0.25);
+    });
+
+    // =========================================================================
+    // 6. النوافذ المنبثقة (الدردشة، مواعيد البث، الإعدادات، منبه النوم، الاستوديو)
+    // =========================================================================
+    let toastTimer = null;
+
+    function showToast(msg) {
+      clearTimeout(toastTimer);
+      toastMsg.textContent = msg;
+      toastMsg.style.opacity = '1';
+      toastTimer = setTimeout(() => {
+        toastMsg.style.opacity = '0';
+      }, Math.max(3200, msg.length * 70));
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function openModal(tab) {
+      playMechanicalClick();
+      state.currentModal = tab;
+      modalOverlay.classList.remove('hidden');
+      modalOverlay.classList.add('flex');
+
+      if (tab === 'chat') {
+        modalTitle.innerHTML = `<i class="fa-solid fa-comments"></i><span>راسل المذيع • دردشة ZIKO FM</span>`;
+        renderListenerChatModal();
+      } else if (tab === 'schedule') {
+        modalTitle.innerHTML = `<i class="fa-regular fa-clock"></i><span>مواعيد البث</span>`;
+        renderScheduleModal();
+      } else if (tab === 'settings') {
+        modalTitle.innerHTML = `<i class="fa-solid fa-lock"></i><span>إعدادات الراديو الخاصة</span>`;
+        if (!state.settingsUnlocked) {
+          renderSettingsLogin();
+        } else {
+          renderSettingsModal();
+        }
+      } else if (tab === 'sleep') {
+        modalTitle.innerHTML = `<i class="fa-regular fa-clock"></i><span>منبه النوم التلقائي</span>`;
+        renderSleepModal();
+      } else if (tab === 'share') {
+        modalTitle.innerHTML = `<i class="fa-solid fa-share-nodes"></i><span>مشاركة تطبيق ZIKO FM</span>`;
+        renderShareModal();
+      } else if (tab === 'studio') {
+        modalTitle.innerHTML = `<i class="fa-solid fa-microphone-lines"></i><span>استوديو البث الخاص</span>`;
+        if (!state.studioUnlocked) {
+          renderStudioLogin();
+        } else {
+          renderStudioContent();
+        }
+      }
+    }
+
+    function renderShareModal() {
+      const shareText = `استمع الآن إلى راديو ZIKO FM (راديو زمان المصري الكلاسيكي) وتلاوات القرآن الكريم على مدار الساعة.`;
+
+      modalBody.innerHTML = `
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-xl bg-black/40 border border-amber-500/30 text-amber-100 leading-relaxed">
+            ${escapeHtml(shareText)}
+          </div>
+
+          <div class="flex gap-2">
+            <button id="copyShareLinkBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-xs shadow active:scale-95 transition flex items-center justify-center gap-1.5">
+              <i class="fa-regular fa-copy"></i>
+              <span>نسخ رسالة الدعوة</span>
+            </button>
+            <button id="nativeShareBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs shadow active:scale-95 transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-share-from-square"></i>
+              <span>مشاركة الآن</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('copyShareLinkBtn').addEventListener('click', () => {
+        const tempArea = document.createElement('textarea');
+        tempArea.value = shareText;
+        tempArea.setAttribute('readonly', '');
+        tempArea.style.position = 'fixed';
+        tempArea.style.opacity = '0';
+        document.body.appendChild(tempArea);
+        tempArea.select();
+        tempArea.setSelectionRange(0, 99999);
+        try {
+          document.execCommand('copy');
+        } catch (e) {}
+        document.body.removeChild(tempArea);
+        showToast('تم نسخ رسالة دعوة راديو ZIKO FM');
+      });
+
+      document.getElementById('nativeShareBtn').addEventListener('click', async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'ZIKO FM', text: shareText });
+            return;
+          } catch (e) {}
+        }
+        document.getElementById('copyShareLinkBtn').click();
+      });
+    }
+
+    function renderSleepModal() {
+      modalBody.innerHTML = `
+        <p class="text-xs text-amber-200/80">اختر المدة لإغلاق الراديو تلقائياً:</p>
+        <div class="grid grid-cols-3 gap-2">
+          ${[15, 30, 45, 60, 0].map(mins => `
+            <button class="sleep-opt-btn py-2.5 rounded-xl border border-amber-500/40 bg-black/40 hover:bg-amber-700/40 font-bold text-xs ${mins === 0 ? 'col-span-2' : ''}" data-mins="${mins}">
+              ${mins === 0 ? 'إلغاء منبه النوم' : mins + ' دقيقة'}
+            </button>
+          `).join('')}
+        </div>
+        <div class="text-center text-xs text-amber-300 font-bold pt-1">
+          ${state.sleepTimerMinutes > 0 ? `المؤقت نشط: سيتم الإغلاق بعد ${state.sleepTimerMinutes} دقيقة` : 'منبه النوم غير مفعل'}
+        </div>
+      `;
+
+      document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const mins = parseInt(btn.getAttribute('data-mins'), 10);
+          if (state.sleepTimerInterval) clearInterval(state.sleepTimerInterval);
+          state.sleepTimerMinutes = mins;
+
+          if (mins > 0) {
+            showToast(`تم ضبط منبه النوم على ${mins} دقيقة`);
+            state.sleepTimerInterval = setInterval(() => {
+              state.sleepTimerMinutes--;
+              if (state.sleepTimerMinutes <= 0) {
+                clearInterval(state.sleepTimerInterval);
+                if (state.isOn) togglePower();
+                showToast('تم إيقاف الراديو بواسطة منبه النوم');
+              }
+            }, 60000);
+          } else {
+            showToast('تم إلغاء منبه النوم');
+          }
+          closeModal();
+        });
+      });
+    }
+
+    // =========================================================================
+    // دردشة المستمعين (/ziko_fm/chat)
+    // =========================================================================
+    function renderListenerChatModal() {
+      modalBody.innerHTML = `
+        <div class="flex items-center justify-between bg-black/40 px-3 py-1.5 rounded-xl border border-amber-500/25 text-xs">
+          <span class="text-amber-200 font-bold"><i class="fa-solid fa-headphones text-amber-400 ml-1"></i> المتواجدون: ${state.activeListenersCount}</span>
+          <span id="chatConnStatus" class="${state.firebaseConnected ? 'text-emerald-300' : 'text-amber-300'} font-bold">
+            ${state.firebaseConnected ? 'دردشة مباشرة' : 'اتصال تلقائي'}
+          </span>
+        </div>
+
+        <div id="chatMessagesContainer" class="h-60 overflow-y-auto vintage-scroll bg-[#f7eedc] text-[#2b1708] rounded-xl p-2.5 space-y-2 border-2 border-[#9e7c3c] shadow-inner"></div>
+
+        <div class="space-y-2 pt-1">
+          <div class="flex gap-2">
+            <input id="chatUserNameInput" type="text" maxlength="24" placeholder="اسمك المستعار" value="${escapeHtml(state.listenerName)}"
+              class="w-1/3 px-2.5 py-2 rounded-xl bg-black/50 border border-amber-500/40 text-amber-100 text-xs focus:outline-none" />
+            <input id="chatMessageInput" type="text" maxlength="200" placeholder="اكتب رسالتك أو إهداءك..."
+              class="flex-1 px-3 py-2 rounded-xl bg-black/50 border border-amber-500/40 text-amber-100 text-xs focus:outline-none" />
+          </div>
+          <button id="sendChatBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-xs shadow-lg active:scale-95 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>إرسال الرسالة</span>
+          </button>
+        </div>
+      `;
+
+      renderChatMessagesList();
+      applyChatPermissions();
+
+      const msgInput = document.getElementById('chatMessageInput');
+      const sendBtn = document.getElementById('sendChatBtn');
+
+      const submitMsg = () => {
+        const nick = document.getElementById('chatUserNameInput').value.trim() || 'مستمع زيكو';
+        const txt = msgInput.value.trim();
+        if (!txt) {
+          showToast('اكتب رسالتك أولاً');
+          return;
+        }
+        if (state.chatLocked) {
+          showToast('الدردشة مغلقة حالياً بقرار المذيع');
+          return;
+        }
+        if (state.bannedUsers[deviceId]) {
+          showToast('تم منعك من الإرسال بواسطة المذيع');
+          return;
+        }
+        if (Date.now() - lastSentAt < 3000) {
+          showToast('انتظر ثوانٍ قبل إرسال رسالة جديدة');
+          return;
+        }
+        lastSentAt = Date.now();
+        state.listenerName = nick;
+        saveLocalConfig();
+        msgInput.value = '';
+        sendChatMessage(nick, txt, false);
+      };
+
+      sendBtn.addEventListener('click', submitMsg);
+      msgInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitMsg();
+      });
+    }
+
+    function renderChatMessagesList() {
+      const container = document.getElementById('chatMessagesContainer');
+      if (!container) return;
+
+      if (state.chatMessages.length === 0) {
+        container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center text-[#6e4a23] p-4">
+          <i class="fa-regular fa-comment-dots text-2xl mb-1 opacity-70"></i>
+          <p class="text-xs font-bold">ابدأ الدردشة مع المستمعين داخل راديو ZIKO FM</p>
+        </div>
+      `;
+      return;
+    }
+
+      container.innerHTML = state.chatMessages.map((m) => {
+        const timeStr = m.createdAt
+          ? new Date(m.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+          : '';
+        const deleteActionHtml = state.studioUnlocked
+          ? `${!m.isHost && m.uid ? `<button type="button" class="ban-user-btn px-1.5 py-0.5 rounded bg-stone-800 text-white text-[10px] font-bold" data-uid="${escapeHtml(m.uid)}" data-name="${escapeHtml(m.sender)}" title="حظر المرسل وحذف رسائله"><i class="fa-solid fa-ban"></i></button>` : ''}<button type="button" class="delete-msg-btn px-1.5 py-0.5 rounded bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold transition" data-msg-id="${escapeHtml(m.id)}" title="حذف الرسالة"><i class="fa-solid fa-trash-can"></i></button>`
+          : '';
+        if (m.isHost) {
+          return `
+            <div class="p-2 rounded-xl bg-gradient-to-l from-amber-900 to-[#4a2308] text-amber-100 border border-amber-400 shadow-xs">
+              <div class="flex items-center justify-between gap-2 text-[10px] font-black text-amber-300 mb-0.5">
+                <span><i class="fa-solid fa-crown ml-1"></i>${escapeHtml(m.sender)} [المذيع]</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="opacity-75">${timeStr}</span>
+                  ${deleteActionHtml}
+                </div>
+              </div>
+              <p class="text-xs font-bold leading-snug">${escapeHtml(m.text)}</p>
+            </div>
+          `;
+        }
+        return `
+          <div class="p-2 rounded-xl bg-white/85 border border-[#d6c29c]">
+            <div class="flex items-center justify-between gap-2 text-[10px] font-extrabold text-[#7a4b18] mb-0.5">
+              <span>${escapeHtml(m.sender)}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="opacity-70">${timeStr}</span>
+                ${deleteActionHtml}
+              </div>
+            </div>
+            <p class="text-xs font-semibold text-[#241203] leading-snug">${escapeHtml(m.text)}</p>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.delete-msg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const msgId = btn.getAttribute('data-msg-id');
+          deleteSingleChatMessage(msgId);
+        });
+      });
+
+      bindBanButtons(container);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    let lastSentAt = 0;
+
+    function refreshChatViews() {
+      renderChatMessagesList();
+      renderStudioChatList();
+    }
+
+    function deleteSingleChatMessage(msgId) {
+      if (!msgId || !state.studioUnlocked) return;
+      if (!db || String(msgId).startsWith('local_')) {
+        state.chatMessages = state.chatMessages.filter(m => m.id !== msgId);
+        refreshChatViews();
+        return;
+      }
+      remove(ref(db, `${DB_PATHS.chat}/${msgId}`))
+        .then(() => showToast('تم حذف الرسالة عند الجميع'))
+        .catch(() => showToast('تعذر الحذف — راجع قواعد Firebase'));
+    }
+
+    function banUser(uid, name) {
+      if (!db || !uid || !state.studioUnlocked) return;
+      set(ref(db, `${DB_PATHS.moderation}/banned/${uid}`), name || 'مستمع')
+        .then(() => {
+          state.chatMessages
+            .filter(m => m.uid === uid)
+            .forEach(m => remove(ref(db, `${DB_PATHS.chat}/${m.id}`)).catch(() => {}));
+          showToast(`تم حظر ${name} وحذف رسائله`);
+        })
+        .catch(() => showToast('تعذر الحظر — راجع قواعد Firebase'));
+    }
+
+    function bindBanButtons(root) {
+      root.querySelectorAll('.ban-user-btn').forEach((btn) => {
+        btn.addEventListener('click', () => banUser(btn.dataset.uid, btn.dataset.name));
+      });
+    }
+
+    function applyChatPermissions() {
+      const input = document.getElementById('chatMessageInput');
+      const button = document.getElementById('sendChatBtn');
+      if (!input || !button) return;
+      const banned = Boolean(state.bannedUsers[deviceId]);
+      const blocked = banned || state.chatLocked;
+      input.disabled = blocked;
+      button.disabled = blocked;
+      button.style.opacity = blocked ? '0.5' : '1';
+      input.placeholder = banned ? 'تم منعك من الإرسال'
+        : state.chatLocked ? 'الدردشة مغلقة حالياً' : 'اكتب رسالتك أو إهداءك...';
+    }
+
+    function renderModerationPanel() {
+      const lockBtn = document.getElementById('btnToggleChatLock');
+      const box = document.getElementById('bannedList');
+      if (!lockBtn || !box) return;
+      lockBtn.textContent = state.chatLocked ? 'فتح الدردشة' : 'إغلاق الدردشة';
+      const entries = Object.entries(state.bannedUsers);
+      box.innerHTML = entries.map(([uid, name]) => `
+        <button type="button" class="unban-btn px-2 py-1 rounded-lg bg-red-900/60 border border-red-400/40 text-red-100 text-[10px] font-bold" data-uid="${escapeHtml(uid)}">
+          فك حظر ${escapeHtml(name)}
+        </button>`).join('');
+      box.querySelectorAll('.unban-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          remove(ref(db, `${DB_PATHS.moderation}/banned/${btn.dataset.uid}`))
+            .then(() => showToast('تم فك الحظر'))
+            .catch(() => showToast('تعذر فك الحظر'));
+        });
+      });
+    }
+
+    function sendChatMessage(sender, text, isHost = false) {
+      const msgObj = {
+        sender,
+        text,
+        isHost,
+        uid: deviceId,
+        createdAt: Date.now()
+      };
+
+      if (!db) {
+        showToast('تعذر الاتصال بالدردشة');
+        return;
+      }
+
+      push(ref(db, DB_PATHS.chat), msgObj).catch((err) => {
+        console.warn('Firebase chat write error:', err);
+        showToast('تعذر إرسال الرسالة');
+      });
+    }
+
+    // =========================================================================
+    // استوديو المذيع (خاص بالمذيع عبر رمز الدخول)
+    // =========================================================================
+    function renderStudioLogin() {
+      modalBody.innerHTML = `
+        <div class="text-center space-y-3 py-2">
+          <div class="w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-400 mx-auto flex items-center justify-center text-amber-300 text-2xl">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <div>
+            <h4 class="font-black text-base text-amber-200">دخول استوديو المذيع الخاص</h4>
+            <p class="text-xs text-amber-200/75 mt-0.5">لوحة تحكم خاصة بالمذيع لإدارة البث والفواصل والدردشة</p>
+          </div>
+          <div class="max-w-xs mx-auto">
+            <input id="studioPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="أدخل رمز الدخول الخاص"
+              class="w-full text-center tracking-widest font-black px-3 py-2.5 rounded-xl bg-black/60 border border-amber-400/50 text-amber-100 text-sm focus:outline-none" />
+          </div>
+          <button id="unlockStudioBtn" type="button" class="w-full max-w-xs py-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-xs shadow-lg active:scale-95 transition">
+            دخول الاستوديو
+          </button>
+        </div>
+      `;
+
+      const pinInput = document.getElementById('studioPinInput');
+      const unlockBtn = document.getElementById('unlockStudioBtn');
+
+      const verify = () => {
+        if (checkPin(pinInput.value, state.studioPinHash, 'رمز الدخول الخاص غير صحيح')) {
+          state.studioUnlocked = true;
+          playMechanicalClick();
+          renderStudioContent();
+        }
+      };
+
+      unlockBtn.addEventListener('click', verify);
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') verify();
+      });
+    }
+
+    function renderStudioContent() {
+      modalBody.innerHTML = `
+        <!-- تنبيه صلاحيات الميكروفون وبدائل البث -->
+        <div class="p-2.5 rounded-xl bg-black/40 border border-amber-500/25 text-[11px] text-amber-200/85 flex items-start justify-between gap-2">
+          <div class="flex items-start gap-2">
+            <i class="fa-solid fa-microphone text-amber-400 mt-0.5 shrink-0"></i>
+            <div>
+              <span class="font-black text-amber-300">حالة المايك:</span>
+              ${state.hasActiveMic
+                ? '<span class="text-emerald-300 font-bold">الميكروفون متصل ويبث مباشرة</span>'
+                : micErrorText
+                  ? `<span class="text-red-300 font-bold">${escapeHtml(micErrorText)}</span>`
+                  : '<span>اضغط "بدء البث المباشر بالمايك" ثم وافق على إذن الميكروفون.</span>'
+              }
+            </div>
+          </div>
+          ${state.isBroadcasting && !state.hasActiveMic ? `
+            <button id="btnRetryMicNow" type="button" class="shrink-0 px-2 py-1 rounded-lg bg-amber-500 text-amber-950 font-black text-[10px] active:scale-95 transition">
+              تفعيل المايك
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="flex justify-end">
+          <button id="btnLockStudio" type="button" class="px-2.5 py-1 rounded-lg bg-black/50 text-amber-300 text-[11px] font-bold"><i class="fa-solid fa-lock ml-1"></i>قفل الاستوديو</button>
+        </div>
+
+        <!-- 1. التحكم في البث المباشر -->
+        <div class="p-3 rounded-xl bg-black/45 border ${state.isBroadcasting ? 'border-red-500' : 'border-amber-500/35'} space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full ${state.isBroadcasting ? 'bg-red-500 animate-ping' : 'bg-stone-500'}"></span>
+              <span class="font-black text-xs text-amber-200">
+                ${state.isBroadcasting
+                  ? (state.broadcastMode === 'break' ? 'على الهواء: فاصل / أغنية' : state.broadcastMode === 'stream' ? 'على الهواء: بث عبر الرابط' : 'على الهواء: بالمايك')
+                  : 'الاستوديو متوقف حالياً'}
+              </span>
+            </div>
+            <span id="studioListenerBadge" class="text-[11px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">
+              ${state.activeListenersCount} مستمع متصل
+            </span>
+          </div>
+
+          <div class="h-2 bg-black/70 rounded-full overflow-hidden border border-amber-500/20">
+            <div id="studioMicLevelBar" class="h-full bg-gradient-to-l from-red-500 via-amber-400 to-emerald-400 transition-all duration-75" style="width: 0%;"></div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            ${!state.isBroadcasting ? `
+              <button id="btnStartLiveMic" class="col-span-2 py-2.5 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-xs shadow active:scale-95 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-microphone"></i>
+                <span>بدء البث المباشر بالمايك</span>
+              </button>
+              <button id="btnStartAudioOnlyLive" class="col-span-2 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-200 font-extrabold text-[11px] active:scale-95 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-music"></i>
+                <span>البث بالفواصل والأغاني فقط (بدون مايك)</span>
+              </button>
+              ${state.externalStreamUrl ? `
+                <button id="btnStartUrlLive" class="col-span-2 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-[11px] active:scale-95 transition flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-link"></i>
+                  <span>بث رابط الصوت المباشر للجميع</span>
+                </button>
+              ` : ''}
+            ` : `
+              <button id="btnToggleMuteMic" class="py-2 rounded-xl ${state.micMuted ? 'bg-amber-600 text-white' : 'bg-black/60 text-amber-200 border border-amber-400/40'} font-black text-xs active:scale-95 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid ${state.micMuted ? 'fa-microphone-slash' : 'fa-microphone'}"></i>
+                <span>${state.micMuted ? 'إلغاء كتم المايك' : 'كتم المايك'}</span>
+              </button>
+              <button id="btnStopLiveMic" class="py-2 rounded-xl bg-stone-800 hover:bg-red-900 text-red-200 border border-red-500/40 font-black text-xs active:scale-95 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-stop"></i>
+                <span>إنهاء البث</span>
+              </button>
+            `}
+          </div>
+        </div>
+
+        <!-- 2. مشغل الفواصل والأغاني -->
+        <div class="p-3 rounded-xl bg-black/45 border border-amber-500/35 space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="font-black text-xs text-amber-300"><i class="fa-solid fa-compact-disc ml-1"></i>الفواصل الإعلانية والأغاني</h4>
+            <label class="cursor-pointer px-2.5 py-1 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-amber-200 text-[11px] font-extrabold">
+              <i class="fa-solid fa-folder-plus ml-1"></i>رفع ملف صوتي
+              <input id="studioAudioFilesInput" type="file" accept="audio/*" multiple class="hidden" />
+            </label>
+          </div>
+
+          <label class="cursor-pointer w-full py-2.5 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-xs shadow flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-dot"></i>
+            <span>سجّل بصوتك وأذِعه للجميع</span>
+            <input id="studioRecordInput" type="file" accept="audio/*" capture class="hidden" />
+          </label>
+          <p class="text-[10px] text-amber-200/75 text-center">يفتح مسجل الموبايل: سجّل ثم احفظ، فيُذاع التسجيل (ليس بثاً حياً)</p>
+
+          ${state.broadcastMode === 'break' && state.isBroadcasting ? `
+            <div class="p-2 rounded-lg bg-emerald-900/50 border border-emerald-400/50 flex items-center justify-between gap-2">
+              <span class="text-[11px] font-bold text-emerald-200 truncate">يُبث الآن: ${escapeHtml(state.currentBreakTitle)}</span>
+              <button id="btnBackToMic" class="shrink-0 px-2.5 py-1 rounded-lg bg-amber-400 text-amber-950 font-black text-[11px] shadow">
+                عودة للمايك
+              </button>
+            </div>
+          ` : ''}
+
+          <div class="space-y-1.5 max-h-32 overflow-y-auto vintage-scroll">
+            ${state.playlist.map(track => `
+              <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-black/40 border border-amber-500/20">
+                <span class="text-xs font-bold text-amber-100 truncate flex-1">${escapeHtml(track.name)}</span>
+                <button class="play-break-track-btn shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-[11px] active:scale-95 transition" data-track-id="${track.id}">
+                  بث الفاصل للجميع
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 3. دردشة المستمعين ورد المذيع -->
+        <div class="p-3 rounded-xl bg-black/45 border border-amber-500/35 space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="font-black text-xs text-amber-300"><i class="fa-solid fa-comments ml-1"></i>دردشة المستمعين</h4>
+            <div class="flex items-center gap-3">
+              <button id="btnToggleChatLock" type="button" class="text-[11px] text-amber-300 font-bold">إغلاق الدردشة</button>
+              <button id="btnClearChat" type="button" class="text-[11px] text-red-300 font-bold">مسح الكل</button>
+            </div>
+          </div>
+          <div id="bannedList" class="flex flex-wrap gap-1"></div>
+
+          <div id="studioChatList" class="h-44 overflow-y-auto vintage-scroll bg-black/50 rounded-lg p-2 space-y-1.5 border border-amber-500/20 text-xs"></div>
+
+          <div class="flex gap-1.5">
+            <input id="studioHostReplyInput" type="text" placeholder="رد بصفتك [المذيع]..."
+              class="flex-1 px-2.5 py-1.5 rounded-lg bg-black/60 border border-amber-500/40 text-amber-100 text-xs focus:outline-none" />
+            <button id="btnSendHostReply" class="px-3 py-1.5 rounded-lg bg-amber-400 text-amber-950 font-black text-xs">إرسال</button>
+          </div>
+        </div>
+
+        <!-- 4. تثبيت إعلان علوي وتحديث بيانات الحلقة -->
+        <div class="p-3 rounded-xl bg-black/45 border border-amber-500/35 space-y-2">
+          <h4 class="font-black text-xs text-amber-300"><i class="fa-solid fa-bullhorn ml-1"></i>شريط الإعلان المثبت وحالة الحلقة</h4>
+          <input id="studioPinnedNotice" type="text" placeholder="نص الإعلان المثبت أعلى الراديو للجميع" value="${escapeHtml(state.pinnedNotice || '')}"
+            class="w-full px-2.5 py-1.5 rounded-lg bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+          <div class="grid grid-cols-2 gap-2">
+            <input id="studioShowTitle" type="text" placeholder="اسم البرنامج" value="${escapeHtml(state.showTitle)}"
+              class="px-2.5 py-1.5 rounded-lg bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+            <input id="studioHostName" type="text" placeholder="اسم المذيع" value="${escapeHtml(state.hostName)}"
+              class="px-2.5 py-1.5 rounded-lg bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+          </div>
+          <button id="btnSaveStudioInfo" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow">
+            نشر الإعلان وتحديث بيانات البث
+          </button>
+        </div>
+      `;
+
+      renderStudioChatList();
+      if (state.isBroadcasting) startStudioVuLoop();
+
+      const startMicBtn = document.getElementById('btnStartLiveMic');
+      if (startMicBtn) startMicBtn.addEventListener('click', () => startPhoneLiveBroadcast(false));
+
+      const retryMicBtn = document.getElementById('btnRetryMicNow');
+      if (retryMicBtn) retryMicBtn.addEventListener('click', enableMicDuringBroadcast);
+
+      const startBreaksOnlyBtn = document.getElementById('btnStartAudioOnlyLive');
+      if (startBreaksOnlyBtn) startBreaksOnlyBtn.addEventListener('click', () => startPhoneLiveBroadcast(true));
+
+      const startUrlBtn = document.getElementById('btnStartUrlLive');
+      if (startUrlBtn) startUrlBtn.addEventListener('click', startExternalStreamBroadcast);
+
+      const stopBtn = document.getElementById('btnStopLiveMic');
+      if (stopBtn) stopBtn.addEventListener('click', stopPhoneLiveBroadcast);
+
+      const muteBtn = document.getElementById('btnToggleMuteMic');
+      if (muteBtn) muteBtn.addEventListener('click', toggleBroadcasterMicMute);
+
+      const backToMicBtn = document.getElementById('btnBackToMic');
+      if (backToMicBtn) backToMicBtn.addEventListener('click', returnFromBreakToMic);
+
+      document.getElementById('studioAudioFilesInput').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files || []);
+        files.forEach((file) => {
+          state.playlist.push({
+            id: 'file_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: file.name.replace(/\.[^/.]+$/, ''),
+            url: URL.createObjectURL(file),
+            isBuiltIn: false
+          });
+        });
+        if (files.length > 0) {
+          showToast(`تمت إضافة ${files.length} ملف صوتي`);
+          renderStudioContent();
+        }
+      });
+
+      document.getElementById('studioRecordInput').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const count = state.playlist.filter(t => t.isRecording).length + 1;
+        const track = {
+          id: 'rec_' + Date.now(),
+          name: `تسجيل المذيع ${count}`,
+          url: URL.createObjectURL(file),
+          isBuiltIn: false,
+          isRecording: true
+        };
+        state.playlist.push(track);
+        triggerCommercialOrSongBreak(track);
+      });
+
+      document.querySelectorAll('.play-break-track-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tid = btn.getAttribute('data-track-id');
+          const track = state.playlist.find(t => t.id === tid);
+          triggerCommercialOrSongBreak(track);
+        });
+      });
+
+      const sendHostReply = () => {
+        const inp = document.getElementById('studioHostReplyInput');
+        const txt = inp.value.trim();
+        if (!txt) return;
+        inp.value = '';
+        sendChatMessage(state.hostName || DEFAULT_HOST_TAGLINE, txt, true);
+      };
+      document.getElementById('btnSendHostReply').addEventListener('click', sendHostReply);
+      document.getElementById('studioHostReplyInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendHostReply();
+      });
+
+      let clearArmedAt = 0;
+      const clearBtn = document.getElementById('btnClearChat');
+      clearBtn.addEventListener('click', () => {
+        if (Date.now() - clearArmedAt > 4000) {
+          clearArmedAt = Date.now();
+          clearBtn.textContent = 'اضغط مرة أخرى للتأكيد';
+          setTimeout(() => { clearBtn.textContent = 'مسح الكل'; }, 4000);
+          return;
+        }
+        clearBtn.textContent = 'مسح الكل';
+        if (!db) return;
+        remove(ref(db, DB_PATHS.chat))
+          .then(() => showToast('تم مسح الدردشة'))
+          .catch(() => showToast('تعذر المسح — راجع قواعد Firebase'));
+      });
+
+      document.getElementById('btnToggleChatLock').addEventListener('click', () => {
+        if (!db) return;
+        set(ref(db, `${DB_PATHS.moderation}/locked`), !state.chatLocked)
+          .catch(() => showToast('تعذر التنفيذ — راجع قواعد Firebase'));
+      });
+      renderModerationPanel();
+
+      document.getElementById('btnLockStudio').addEventListener('click', () => {
+        state.studioUnlocked = false;
+        renderStudioLogin();
+      });
+
+      document.getElementById('btnSaveStudioInfo').addEventListener('click', () => {
+        const pinned = document.getElementById('studioPinnedNotice').value.trim();
+        state.showTitle = sanitizeStationText(document.getElementById('studioShowTitle').value.trim(), DEFAULT_SHOW_TITLE);
+        state.hostName = sanitizeStationText(document.getElementById('studioHostName').value.trim(), DEFAULT_HOST_TAGLINE);
+        saveLocalConfig();
+        updateModeUI();
+        publishPinnedNotice(pinned);
+        publishStationInfo();
+        showToast('تم تحديث بيانات البث والإعلان المثبت');
+      });
+    }
+
+    function renderStudioChatList() {
+      const box = document.getElementById('studioChatList');
+      if (!box) return;
+
+      if (state.chatMessages.length === 0) {
+        box.innerHTML = `<div class="text-center text-amber-200/60 py-4 text-[11px]">بانتظار رسائل المستمعين...</div>`;
+        return;
+      }
+
+      box.innerHTML = state.chatMessages.map((m) => `
+        <div class="p-1.5 rounded bg-black/50 border border-amber-500/20 flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <span class="font-black ${m.isHost ? 'text-amber-300' : 'text-emerald-300'}">${escapeHtml(m.sender)}${m.isHost ? ' [المذيع]' : ''}:</span>
+            <span class="text-amber-100">${escapeHtml(m.text)}</span>
+          </div>
+          ${!m.isHost && m.uid ? `<button type="button" class="ban-user-btn shrink-0 px-2 py-1 rounded bg-stone-700 text-white text-[10px] font-bold" data-uid="${escapeHtml(m.uid)}" data-name="${escapeHtml(m.sender)}">حظر</button>` : ''}
+          <button type="button" class="studio-delete-msg-btn shrink-0 px-1.5 py-0.5 rounded bg-red-700/80 hover:bg-red-600 text-white text-[10px] font-bold transition" data-msg-id="${escapeHtml(m.id)}" title="حذف الرسالة">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      `).join('');
+
+      box.querySelectorAll('.studio-delete-msg-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const msgId = btn.getAttribute('data-msg-id');
+          deleteSingleChatMessage(msgId);
+        });
+      });
+
+      bindBanButtons(box);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderScheduleModal() {
+      const lines = (state.scheduleText || DEFAULT_SCHEDULE)
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+      modalBody.innerHTML = `
+        <div class="space-y-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-black/45 border border-amber-500/35 space-y-2 leading-relaxed text-amber-100">
+            ${lines.map(line => `<p class="font-bold">${escapeHtml(line)}</p>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettingsLogin() {
+      modalBody.innerHTML = `
+        <div class="text-center space-y-3 py-2">
+          <div class="w-14 h-14 rounded-full bg-amber-500/20 border-2 border-amber-400 mx-auto flex items-center justify-center text-amber-300 text-2xl">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h4 class="font-black text-base text-amber-200">إعدادات خاصة بالمذيع</h4>
+            <p class="text-xs text-amber-200/75 mt-0.5">أدخل كلمة السر الخاصة لفتح لوحة التحكم والإعدادات</p>
+          </div>
+          <div class="max-w-xs mx-auto">
+            <input id="settingsPinInput" type="password" inputmode="numeric" maxlength="12" placeholder="أدخل كلمة السر"
+              class="w-full text-center tracking-widest font-black px-3 py-2.5 rounded-xl bg-black/60 border border-amber-400/50 text-amber-100 text-sm focus:outline-none" />
+          </div>
+          <button id="unlockSettingsBtn" type="button" class="w-full max-w-xs py-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-xs shadow-lg active:scale-95 transition">
+            فتح الإعدادات
+          </button>
+        </div>
+      `;
+
+      const pinInput = document.getElementById('settingsPinInput');
+      const unlockBtn = document.getElementById('unlockSettingsBtn');
+
+      const verifySettingsPin = () => {
+        if (checkPin(pinInput.value, state.settingsPinHash, 'كلمة السر الخاصة بالإعدادات غير صحيحة')) {
+          state.settingsUnlocked = true;
+          playMechanicalClick();
+          renderSettingsModal();
+        }
+      };
+
+      unlockBtn.addEventListener('click', verifySettingsPin);
+      pinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') verifySettingsPin();
+      });
+    }
+
+    function renderSettingsModal() {
+      modalBody.innerHTML = `
+        <div class="space-y-3 text-xs">
+          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 text-[11px] text-emerald-200">
+            <span><i class="fa-solid fa-lock-open ml-1"></i>تم فتح الإعدادات الخاصة بنجاح</span>
+            <button id="lockSettingsNowBtn" type="button" class="px-2 py-0.5 rounded bg-black/50 hover:bg-black/70 text-amber-300 font-bold">
+              قفل الآن
+            </button>
+          </div>
+
+          <div>
+            <label class="block font-bold text-amber-200 mb-1">إذاعة القرآن الكريم (تلاوة فقط)</label>
+            <select id="cfgQuranStation" class="w-full px-3 py-2 rounded-xl bg-black/80 border border-amber-500/40 text-amber-100 text-xs">
+              ${QURAN_STATIONS.map(q => `<option value="${q.id}" ${q.id === state.quranStation ? 'selected' : ''}>${q.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-amber-200 mb-1">رابط بث مباشر إضافي لـ ZIKO FM (اختياري)</label>
+            <input id="cfgExternalUrl" type="url" dir="ltr" placeholder="https://..." value="${escapeHtml(state.externalStreamUrl)}"
+              class="w-full px-3 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-amber-200 mb-1">اسم المذيع</label>
+              <input id="cfgHostName" type="text" value="${escapeHtml(state.hostName)}"
+                class="w-full px-3 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+            </div>
+            <div>
+              <label class="block font-bold text-amber-200 mb-1">رمز استوديو جديد</label>
+              <input id="cfgStudioPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="فارغ = بدون تغيير"
+                class="w-full px-3 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-amber-200 mb-1">كلمة سر إعدادات جديدة</label>
+            <input id="cfgSettingsPin" type="password" inputmode="numeric" maxlength="12" autocomplete="new-password" placeholder="فارغ = بدون تغيير"
+              class="w-full px-3 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-100 text-xs" />
+          </div>
+
+          <div>
+            <label class="block font-bold text-amber-200 mb-1">مواعيد البث</label>
+            <textarea id="cfgSchedule" rows="3" class="w-full px-3 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-100 text-xs vintage-scroll">${escapeHtml(state.scheduleText)}</textarea>
+          </div>
+
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-amber-500/30 cursor-pointer">
+            <span class="font-bold text-amber-200">صوت تشويش التوليف عند التبديل</span>
+            <input id="cfgStaticToggle" type="checkbox" ${state.staticSoundEnabled ? 'checked' : ''} class="w-4 h-4 accent-amber-500" />
+          </label>
+
+          <button id="saveSettingsBtn" type="button" class="w-full py-2.5 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950 font-black text-xs shadow-lg active:scale-95 transition">
+            حفظ الإعدادات
+          </button>
+        </div>
+      `;
+
+      document.getElementById('lockSettingsNowBtn').addEventListener('click', () => {
+        state.settingsUnlocked = false;
+        playMechanicalClick();
+        renderSettingsLogin();
+      });
+
+      document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        state.quranStation = document.getElementById('cfgQuranStation').value;
+        state.externalStreamUrl = document.getElementById('cfgExternalUrl').value.trim();
+        state.hostName = sanitizeStationText(document.getElementById('cfgHostName').value.trim(), DEFAULT_HOST_TAGLINE);
+        const newStudioPin = normalizePin(document.getElementById('cfgStudioPin').value);
+        const newSettingsPin = normalizePin(document.getElementById('cfgSettingsPin').value);
+        if ((newStudioPin && newStudioPin.length < 6) || (newSettingsPin && newSettingsPin.length < 6)) {
+          showToast('كلمة السر الجديدة لا تقل عن 6 أرقام');
+          return;
+        }
+        if (newStudioPin) state.studioPinHash = hashPin(newStudioPin);
+        if (newSettingsPin) state.settingsPinHash = hashPin(newSettingsPin);
+        state.scheduleText = document.getElementById('cfgSchedule').value.trim() || DEFAULT_SCHEDULE;
+        state.staticSoundEnabled = Boolean(document.getElementById('cfgStaticToggle').checked);
+
+        saveLocalConfig();
+        updateModeUI();
+        publishStationInfo();
+
+        if (state.isOn) {
+          startCurrentStream();
+        }
+        showToast('تم حفظ الإعدادات بنجاح');
+        closeModal();
+      });
+    }
+
+    function closeModal() {
+      state.currentModal = null;
+      state.settingsUnlocked = false;
+      modalOverlay.classList.add('hidden');
+      modalOverlay.classList.remove('flex');
+      document.querySelectorAll('.dock-item').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('data-tab') === 'home');
+      });
+    }
+
+    // =========================================================================
+    // ربط الأحداث والتهيئة الأولية
+    // =========================================================================
+    powerBtn.addEventListener('click', togglePower);
+
+    keyZikoLive.addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode('ziko', true);
+    });
+    keyQuranLive.addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode('quran', true);
+    });
+    keyLiveChat.addEventListener('click', () => openModal('chat'));
+    keySchedule.addEventListener('click', () => openModal('schedule'));
+
+    document.getElementById('btnSelectZiko').addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode('ziko', true);
+    });
+    document.getElementById('btnSelectQuran').addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode('quran', true);
+    });
+    quickSwitchBtn.addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode(state.mode === 'ziko' ? 'quran' : 'ziko', true);
+    });
+    switchToQuranBannerBtn.addEventListener('click', () => {
+      playMechanicalClick();
+      switchMode('quran', true);
+    });
+    openStudioFromBannerBtn.addEventListener('click', () => openModal('studio'));
+
+    document.getElementById('topScheduleBtn').addEventListener('click', () => openModal('schedule'));
+    document.getElementById('topStudioBtn').addEventListener('click', () => openModal('studio'));
+
+    document.querySelectorAll('.dock-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-tab');
+        document.querySelectorAll('.dock-item').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (tab === 'home') {
+          playMechanicalClick();
+          closeModal();
+        } else {
+          openModal(tab);
+        }
+      });
+    });
+
+    closeModalBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    saveLocalConfig(); // يمسح أي كلمة سر قديمة محفوظة كنص
+    updateModeUI();
+    updatePinnedBanner();
+    setVolume(state.volume);
+    initFirebaseSync();
+  </script>
+</body>
+</html>
